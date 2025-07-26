@@ -3,6 +3,8 @@
 
 import { useAuth } from '@/lib/auth/context';
 import { Users, BookOpen, UserCheck, TrendingUp } from 'lucide-react';
+import Link from "next/link";
+import {cn} from "@/lib/utils/cn";
 
 export default function AdminDashboard() {
     const { user } = useAuth();

@@ -3,6 +3,7 @@
 
 import { useAuth } from '@/lib/auth/context';
 import { BookOpen, Clock, Award, Calendar } from 'lucide-react';
+import {cn} from "@/lib/utils/cn";
 
 export default function StudentDashboard() {
     const { user } = useAuth();
@@ -62,7 +63,7 @@ export default function StudentDashboard() {
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium text-gray-900">
-                                    Completaste la lección "Introducción a JavaScript"
+                                    Completaste la lección Introducción a JavaScript
                                 </p>
                                 <p className="text-sm text-gray-500">Hace 2 horas</p>
                             </div>
