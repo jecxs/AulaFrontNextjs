@@ -64,15 +64,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             toast.success(`¡Bienvenido, ${response.user.firstName}!`);
 
-            // Redirigir según el rol
-            const userRoles = response.user.roles.map(role => role.name);
-            if (userRoles.includes(RoleName.ADMIN)) {
-                router.push(ROUTES.ADMIN.DASHBOARD);
-            } else if (userRoles.includes(RoleName.STUDENT)) {
-                router.push(ROUTES.STUDENT.DASHBOARD);
-            } else {
-                router.push('/');
-            }
+            // ❌ ELIMINADO: No redirigir aquí, dejar que HomePage lo maneje
+            // La redirección será manejada por el componente HomePage
+
         } catch (error: any) {
             const message = error.response?.data?.message || 'Error al iniciar sesión';
             toast.error(message);
