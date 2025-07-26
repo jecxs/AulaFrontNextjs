@@ -50,14 +50,6 @@ export default function LoginForm() {
                     <p className="text-gray-600">Accede a {APP_NAME}</p>
                 </div>
 
-                {/* Demo Credentials Info */}
-                <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <h3 className="text-sm font-medium text-blue-800 mb-2">Cuentas de prueba:</h3>
-                    <div className="text-xs text-blue-700 space-y-1">
-                        <div><strong>Admin:</strong> admin@aulavirtual.com / admin123</div>
-                        <div><strong>Estudiante:</strong> estudiante@aulavirtual.com / student123</div>
-                    </div>
-                </div>
 
                 {/* Form */}
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
