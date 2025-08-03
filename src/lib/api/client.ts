@@ -1,13 +1,27 @@
 // src/lib/api/client.ts
-import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
-import { toast } from 'sonner';
+import axios, { AxiosInstance, AxiosResponse, AxiosError, AxiosRequestConfig } from 'axios';
+import { toast } from 'react-hot-toast';
+
+// Tipos para mejor type safety
+interface ErrorResponse {
+    message?: string;
+    errors?: Record<string, string[]>;
+}
+
+interface ApiErrorResponse {
+    response?: {
+        status?: number;
+        data?: ErrorResponse;
+    };
+    message: string;
+}
 
 class ApiClient {
     private client: AxiosInstance;
 
     constructor() {
         this.client = axios.create({
-            baseURL: process.env.NEXT_PUBLIC_API_URL,
+            baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
             headers: {
                 'Content-Type': 'application/json',
             },
@@ -31,7 +45,7 @@ class ApiClient {
         // Interceptor para manejar respuestas y errores
         this.client.interceptors.response.use(
             (response: AxiosResponse) => {
-                return response;
+                return response.data; // Retornar solo la data
             },
             (error: AxiosError) => {
                 this.handleError(error);
@@ -47,10 +61,18 @@ class ApiClient {
         return null;
     }
 
-    private handleError(error: AxiosError) {
-        const status = error.response?.status;
-        const data = error.response?.data as any;
-        const message = data?.message || error.message;
+    private clearAuth(): void {
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user_data');
+        }
+    }
+
+    private handleError(error: AxiosError): void {
+        const apiError = error as ApiErrorResponse;
+        const status = apiError.response?.status;
+        const data = apiError.response?.data;
+        const message = data?.message || apiError.message;
 
         switch (status) {
             case 401:
@@ -70,8 +92,10 @@ class ApiClient {
             case 422:
                 // Errores de validación
                 if (data?.errors) {
-                    Object.values(data.errors).forEach((error: any) => {
-                        toast.error(error);
+                    Object.values(data.errors).forEach((errorArray: string[]) => {
+                        errorArray.forEach((errorMessage: string) => {
+                            toast.error(errorMessage);
+                        });
                     });
                 } else {
                     toast.error(message);
@@ -86,62 +110,36 @@ class ApiClient {
                 } else {
                     toast.error('Ha ocurrido un error inesperado.');
                 }
+                break;
         }
     }
 
-    private clearAuth() {
-        if (typeof window !== 'undefined') {
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('user_data');
-        }
+    // Métodos HTTP con tipos genéricos correctos
+    async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+        const response = await this.client.get<T>(url, config);
+        return response as T;
     }
 
-    // Métodos HTTP públicos
-    public async get<T>(url: string, params?: any): Promise<T> {
-        const response = await this.client.get<T>(url, { params });
-        return response.data;
+    async post<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+        const response = await this.client.post<T>(url, data, config);
+        return response as T;
     }
 
-    public async post<T>(url: string, data?: any): Promise<T> {
-        const response = await this.client.post<T>(url, data);
-        return response.data;
+    async put<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+        const response = await this.client.put<T>(url, data, config);
+        return response as T;
     }
 
-    public async put<T>(url: string, data?: any): Promise<T> {
-        const response = await this.client.put<T>(url, data);
-        return response.data;
+    async patch<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
+        const response = await this.client.patch<T>(url, data, config);
+        return response as T;
     }
 
-    public async patch<T>(url: string, data?: any): Promise<T> {
-        const response = await this.client.patch<T>(url, data);
-        return response.data;
-    }
-
-    public async delete<T>(url: string): Promise<T> {
-        const response = await this.client.delete<T>(url);
-        return response.data;
-    }
-
-    // Método para upload de archivos
-    public async uploadFile<T>(url: string, file: File, onProgress?: (progress: number) => void): Promise<T> {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await this.client.post<T>(url, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-            onUploadProgress: (progressEvent) => {
-                if (onProgress && progressEvent.total) {
-                    const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                    onProgress(progress);
-                }
-            },
-        });
-
-        return response.data;
+    async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+        const response = await this.client.delete<T>(url, config);
+        return response as T;
     }
 }
 
-// Instancia singleton
+// Exportar instancia única
 export const apiClient = new ApiClient();

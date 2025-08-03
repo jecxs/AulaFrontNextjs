@@ -1,11 +1,10 @@
 // src/app/(student)/student/dashboard/page.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth/context';
-import { coursesApi } from '@/lib/api/courses';
-import { progressApi } from '@/lib/api/progress';
+import { useStudentCourses } from '@/hooks/use-student-courses';
 import { ROUTES } from '@/lib/utils/constants';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import {
@@ -15,106 +14,44 @@ import {
     Award,
     Play,
     CheckCircle,
-    Calendar,
-    Users
+    Users,
+    ChevronRight
 } from 'lucide-react';
-
-interface EnrollmentWithProgress {
-    id: string;
-    course: {
-        id: string;
-        title: string;
-        slug: string;
-        thumbnailUrl?: string;
-        level: string;
-        estimatedHours?: number;
-        instructor: {
-            firstName: string;
-            lastName: string;
-        };
-        _count: {
-            modules: number;
-        };
-    };
-    enrolledAt: string;
-    progress?: {
-        completionPercentage: number;
-        totalLessons: number;
-        completedLessons: number;
-        lastActivity?: string;
-    };
-}
 
 export default function StudentDashboard() {
     const { user } = useAuth();
-    const [enrollments, setEnrollments] = useState<EnrollmentWithProgress[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [stats, setStats] = useState({
-        totalCourses: 0,
-        completedCourses: 0,
-        totalHours: 0,
-        avgProgress: 0,
-    });
+    const { enrollments, stats, isLoading, error } = useStudentCourses();
 
-    useEffect(() => {
-        loadDashboardData();
-    }, []);
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="text-center">
+                    <LoadingSpinner size="lg" />
+                    <p className="mt-4 text-gray-600">Cargando dashboard...</p>
+                </div>
+            </div>
+        );
+    }
 
-    const loadDashboardData = async () => {
-        try {
-            setIsLoading(true);
+    if (error) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="text-center">
+                    <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <BookOpen className="w-6 h-6 text-red-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                        Error al cargar el dashboard
+                    </h3>
+                    <p className="text-gray-600">
+                        Intenta recargar la página o contacta soporte
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
-            // Cargar enrollments
-            const response = await coursesApi.getMyEnrollments();
-            const enrollmentsData = response.data;
-
-            // Cargar progreso para cada curso
-            const enrollmentsWithProgress = await Promise.all(
-                enrollmentsData.map(async (enrollment: any) => {
-                    try {
-                        const progress = await coursesApi.getMyCourseProgress(enrollment.course.id);
-                        return {
-                            ...enrollment,
-                            progress,
-                        };
-                    } catch (error) {
-                        console.error(`Error loading progress for course ${enrollment.course.id}:`, error);
-                        return enrollment;
-                    }
-                })
-            );
-
-            setEnrollments(enrollmentsWithProgress);
-
-            // Calcular estadísticas
-            const totalCourses = enrollmentsWithProgress.length;
-            const completedCourses = enrollmentsWithProgress.filter(
-                e => e.progress?.completionPercentage === 100
-            ).length;
-            const totalHours = enrollmentsWithProgress.reduce(
-                (sum, e) => sum + (e.course.estimatedHours || 0), 0
-            );
-            const avgProgress = totalCourses > 0
-                ? enrollmentsWithProgress.reduce(
-                (sum, e) => sum + (e.progress?.completionPercentage || 0), 0
-            ) / totalCourses
-                : 0;
-
-            setStats({
-                totalCourses,
-                completedCourses,
-                totalHours,
-                avgProgress: Math.round(avgProgress),
-            });
-
-        } catch (error) {
-            console.error('Error loading dashboard data:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const getContinueLink = (enrollment: EnrollmentWithProgress) => {
+    const getContinueLink = (enrollment: any) => {
         return `${ROUTES.STUDENT.COURSES}/${enrollment.course.id}`;
     };
 
@@ -134,21 +71,10 @@ export default function StudentDashboard() {
         return 'bg-red-500';
     };
 
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="text-center">
-                    <LoadingSpinner size="lg" />
-                    <p className="mt-4 text-gray-600">Cargando dashboard...</p>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto space-y-8">
             {/* Saludo */}
-            <div className="mb-8">
+            <div>
                 <h1 className="text-3xl font-bold text-gray-900">
                     ¡Hola, {user?.firstName}! 👋
                 </h1>
@@ -158,7 +84,7 @@ export default function StudentDashboard() {
             </div>
 
             {/* Estadísticas */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                     <div className="flex items-center">
                         <div className="p-3 bg-blue-100 rounded-lg">
@@ -166,7 +92,7 @@ export default function StudentDashboard() {
                         </div>
                         <div className="ml-4">
                             <p className="text-sm font-medium text-gray-600">Cursos Activos</p>
-                            <p className="text-2xl font-bold text-gray-900">{stats.totalCourses}</p>
+                            <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
                         </div>
                     </div>
                 </div>
@@ -178,7 +104,7 @@ export default function StudentDashboard() {
                         </div>
                         <div className="ml-4">
                             <p className="text-sm font-medium text-gray-600">Completados</p>
-                            <p className="text-2xl font-bold text-gray-900">{stats.completedCourses}</p>
+                            <p className="text-2xl font-bold text-gray-900">{stats.completed}</p>
                         </div>
                     </div>
                 </div>
@@ -214,9 +140,10 @@ export default function StudentDashboard() {
                     <h2 className="text-xl font-bold text-gray-900">Mis Cursos</h2>
                     <Link
                         href={ROUTES.STUDENT.COURSES}
-                        className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                        className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors group"
                     >
                         Ver todos
+                        <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                     </Link>
                 </div>
 
@@ -232,7 +159,7 @@ export default function StudentDashboard() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {enrollments.map((enrollment) => (
+                        {enrollments.slice(0, 6).map((enrollment) => (
                             <div
                                 key={enrollment.id}
                                 className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
@@ -247,29 +174,27 @@ export default function StudentDashboard() {
                                         />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center">
-                                            <BookOpen className="w-12 h-12 text-white opacity-80" />
+                                            <BookOpen className="w-12 h-12 text-white/80" />
                                         </div>
                                     )}
 
-                                    {/* Badge de nivel */}
-                                    <div className="absolute top-3 left-3">
-                                        <span className="px-2 py-1 bg-white/90 text-xs font-medium text-gray-700 rounded-full">
-                                            {enrollment.course.level}
-                                        </span>
-                                    </div>
-
-                                    {/* Progreso visual */}
-                                    {enrollment.progress && (
-                                        <div className="absolute bottom-0 left-0 right-0 bg-black/20 p-3">
-                                            <div className="w-full bg-white/30 rounded-full h-2">
-                                                <div
-                                                    className={`h-2 rounded-full ${getProgressColor(enrollment.progress.completionPercentage)}`}
-                                                    style={{ width: `${enrollment.progress.completionPercentage}%` }}
-                                                />
+                                    {/* Progreso overlay */}
+                                    {enrollment.progress && enrollment.progress.completionPercentage > 0 && (
+                                        <div className="absolute bottom-3 left-3 right-3">
+                                            <div className="bg-white/90 backdrop-blur-sm rounded-lg p-2">
+                                                <div className="flex items-center justify-between text-xs mb-1">
+                                                    <span className="font-medium text-gray-700">Progreso</span>
+                                                    <span className="font-bold text-gray-900">
+                                                        {enrollment.progress.completionPercentage}%
+                                                    </span>
+                                                </div>
+                                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                                    <div
+                                                        className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(enrollment.progress.completionPercentage)}`}
+                                                        style={{ width: `${enrollment.progress.completionPercentage}%` }}
+                                                    />
+                                                </div>
                                             </div>
-                                            <p className="text-white text-xs mt-1">
-                                                {enrollment.progress.completionPercentage}% completado
-                                            </p>
                                         </div>
                                     )}
                                 </div>
@@ -281,7 +206,7 @@ export default function StudentDashboard() {
                                     </h3>
 
                                     <div className="flex items-center text-sm text-gray-600 mb-4">
-                                        <Users className="w-4 h-4 mr-1" />
+                                        <Users className="w-4 h-4 mr-2" />
                                         <span>
                                             {enrollment.course.instructor.firstName} {enrollment.course.instructor.lastName}
                                         </span>
@@ -290,54 +215,66 @@ export default function StudentDashboard() {
                                     {/* Estadísticas del curso */}
                                     <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
                                         <div className="flex items-center">
-                                            <BookOpen className="w-4 h-4 mr-1" />
-                                            <span>{enrollment.course._count.modules} módulos</span>
+                                            <BookOpen className="w-3 h-3 mr-1" />
+                                            <span>{enrollment.course._count?.modules || 0} módulos</span>
                                         </div>
                                         {enrollment.course.estimatedHours && (
                                             <div className="flex items-center">
-                                                <Clock className="w-4 h-4 mr-1" />
+                                                <Clock className="w-3 h-3 mr-1" />
                                                 <span>{enrollment.course.estimatedHours}h</span>
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* Progreso detallado */}
-                                    {enrollment.progress && (
-                                        <div className="mb-4">
-                                            <div className="flex items-center justify-between text-sm mb-1">
-                                                <span className="text-gray-600">Progreso</span>
-                                                <span className="font-medium">
-                                                    {enrollment.progress.completedLessons}/{enrollment.progress.totalLessons} lecciones
-                                                </span>
+                                    {/* Estado del progreso */}
+                                    <div className="mb-4">
+                                        {enrollment.progress?.completionPercentage === 100 ? (
+                                            <div className="flex items-center text-green-600 text-sm">
+                                                <CheckCircle className="w-4 h-4 mr-2" />
+                                                <span className="font-medium">Curso completado</span>
                                             </div>
-                                            {enrollment.progress.lastActivity && (
-                                                <p className="text-xs text-gray-500">
-                                                    Última actividad: {formatDate(enrollment.progress.lastActivity)}
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
+                                        ) : enrollment.progress && enrollment.progress.completionPercentage > 0 ? (
+                                            <div className="flex items-center text-blue-600 text-sm">
+                                                <Play className="w-4 h-4 mr-2" />
+                                                <span className="font-medium">En progreso</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center text-gray-500 text-sm">
+                                                <BookOpen className="w-4 h-4 mr-2" />
+                                                <span className="font-medium">Sin iniciar</span>
+                                            </div>
+                                        )}
+                                    </div>
 
-                                    {/* Botón de acción */}
+                                    {/* Botón de continuar */}
                                     <Link
                                         href={getContinueLink(enrollment)}
-                                        className="w-full bg-blue-600 text-white text-center py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm flex items-center justify-center"
+                                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center group"
                                     >
-                                        {enrollment.progress?.completionPercentage === 100 ? (
-                                            <>
-                                                <CheckCircle className="w-4 h-4 mr-2" />
-                                                Revisar Curso
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Play className="w-4 h-4 mr-2" />
-                                                {enrollment.progress?.completionPercentage === 0 ? 'Comenzar' : 'Continuar'}
-                                            </>
-                                        )}
+                                        {enrollment.progress?.completionPercentage === 100
+                                            ? 'Revisar curso'
+                                            : enrollment.progress && enrollment.progress.completionPercentage > 0
+                                                ? 'Continuar'
+                                                : 'Comenzar'
+                                        }
+                                        <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                                     </Link>
                                 </div>
                             </div>
                         ))}
+                    </div>
+                )}
+
+                {/* Mostrar mensaje si hay más cursos */}
+                {enrollments.length > 6 && (
+                    <div className="mt-6 text-center">
+                        <Link
+                            href={ROUTES.STUDENT.COURSES}
+                            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                        >
+                            Ver {enrollments.length - 6} cursos más
+                            <ChevronRight className="w-4 h-4 ml-2" />
+                        </Link>
                     </div>
                 )}
             </div>
