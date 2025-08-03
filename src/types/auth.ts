@@ -31,10 +31,11 @@ export interface AuthResponse {
     user: User;
 }
 
+// ✅ CORREGIDO: login ahora retorna Promise<AuthResponse>
 export interface AuthContextType {
     user: User | null;
     token: string | null;
-    login: (credentials: LoginCredentials) => Promise<void>;
+    login: (credentials: LoginCredentials) => Promise<AuthResponse>;
     logout: () => void;
     isLoading: boolean;
     isAuthenticated: boolean;

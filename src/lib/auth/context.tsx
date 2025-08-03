@@ -2,9 +2,9 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, AuthContextType, LoginCredentials, RoleName } from '@/types/auth';
+import { User, AuthContextType, LoginCredentials, RoleName, AuthResponse } from '@/types/auth';
 import { authApi } from '@/lib/api/auth';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { ROUTES } from '@/lib/utils/constants';
 
@@ -49,7 +49,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const login = async (credentials: LoginCredentials) => {
+    // ✅ CORREGIDO: Ahora retorna la respuesta AuthResponse
+    const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
         try {
             setIsLoading(true);
             const response = await authApi.login(credentials);
@@ -64,8 +65,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             toast.success(`¡Bienvenido, ${response.user.firstName}!`);
 
-            // ❌ ELIMINADO: No redirigir aquí, dejar que HomePage lo maneje
-            // La redirección será manejada por el componente HomePage
+            // ✅ RETORNAR la respuesta para que pueda ser usada en login-form
+            return response;
 
         } catch (error: any) {
             const message = error.response?.data?.message || 'Error al iniciar sesión';
@@ -89,9 +90,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         router.push(ROUTES.AUTH.LOGIN);
     };
 
+    // ✅ Función helper para verificar roles (maneja ambos formatos)
+    const hasRole = (roleName: RoleName): boolean => {
+        if (!user?.roles) return false;
+
+        return user.roles.some((role: any) => {
+            // Formato nuevo: { id, name, description }
+            if (typeof role === 'object' && role.name) {
+                return role.name === roleName;
+            }
+            // Formato viejo: string directo
+            if (typeof role === 'string') {
+                return role === roleName;
+            }
+            return false;
+        });
+    };
+
     const isAuthenticated = !!user && !!token;
-    const isAdmin = user?.roles.some(role => role.name === RoleName.ADMIN) || false;
-    const isStudent = user?.roles.some(role => role.name === RoleName.STUDENT) || false;
+    const isAdmin = hasRole(RoleName.ADMIN);
+    const isStudent = hasRole(RoleName.STUDENT);
 
     const value: AuthContextType = {
         user,

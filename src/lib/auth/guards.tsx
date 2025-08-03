@@ -14,6 +14,23 @@ interface AuthGuardProps {
     roles?: RoleName[];
 }
 
+// ✅ Función helper para extraer roles (maneja ambos formatos)
+function extractUserRoles(user: any): string[] {
+    if (!user?.roles) return [];
+
+    return user.roles.map((role: any) => {
+        // Formato nuevo: { id, name, description }
+        if (typeof role === 'object' && role.name) {
+            return role.name;
+        }
+        // Formato viejo: string directo
+        if (typeof role === 'string') {
+            return role;
+        }
+        return '';
+    }).filter(Boolean);
+}
+
 export function AuthGuard({
                               children,
                               requireAuth = true,
@@ -26,20 +43,42 @@ export function AuthGuard({
     useEffect(() => {
         if (isLoading) return;
 
+        console.log('🛡️ AuthGuard - Checking access:', {
+            isLoading,
+            isAuthenticated,
+            user: user ? {
+                id: user.id,
+                email: user.email,
+                roles: user.roles
+            } : null,
+            requiredRoles: roles
+        });
+
         if (requireAuth && !isAuthenticated) {
+            console.log('❌ AuthGuard - Not authenticated, redirecting to:', redirectTo);
             router.push(redirectTo);
             return;
         }
 
         if (roles.length > 0 && user) {
-            const userRoles = user.roles.map(role => role.name);
+            // ✅ CORREGIDO: Usar función helper robusta
+            const userRoles = extractUserRoles(user);
             const hasRequiredRole = roles.some(role => userRoles.includes(role));
 
+            console.log('🔍 AuthGuard - Role check:', {
+                userRoles,
+                requiredRoles: roles,
+                hasRequiredRole
+            });
+
             if (!hasRequiredRole) {
+                console.log('❌ AuthGuard - Insufficient permissions, redirecting to unauthorized');
                 router.push(ROUTES.UNAUTHORIZED);
                 return;
             }
         }
+
+        console.log('✅ AuthGuard - Access granted');
     }, [isAuthenticated, isLoading, user, router, requireAuth, redirectTo, roles]);
 
     if (isLoading) {
@@ -47,7 +86,7 @@ export function AuthGuard({
             <div className="flex items-center justify-center min-h-screen bg-gray-50">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-4 text-gray-600">Cargando...</p>
+                    <p className="mt-4 text-gray-600">Verificando permisos...</p>
                 </div>
             </div>
         );
@@ -58,7 +97,8 @@ export function AuthGuard({
     }
 
     if (roles.length > 0 && user) {
-        const userRoles = user.roles.map(role => role.name);
+        // ✅ CORREGIDO: Usar función helper robusta
+        const userRoles = extractUserRoles(user);
         const hasRequiredRole = roles.some(role => userRoles.includes(role));
 
         if (!hasRequiredRole) {
