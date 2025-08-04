@@ -1,9 +1,10 @@
 // src/hooks/use-student-courses.ts
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { coursesApi } from '@/lib/api/courses';
+import { progressApi } from '@/lib/api/progress';
+import { toast } from 'react-hot-toast';
 
 export function useStudentCourses() {
-
     // Query para obtener los enrollments del estudiante
     const {
         data: enrollmentsData,
@@ -89,5 +90,74 @@ export function useStudentLesson(lessonId: string) {
         queryFn: () => coursesApi.getLesson(lessonId),
         enabled: !!lessonId,
         staleTime: 5 * 60 * 1000, // 5 minutos
+    });
+}
+
+export function useLessonProgress(lessonId: string) {
+    return useQuery({
+        queryKey: ['lesson-progress', lessonId],
+        queryFn: () => progressApi.checkLessonProgress(lessonId),
+        enabled: !!lessonId,
+        staleTime: 1 * 60 * 1000, // 1 minuto
+    });
+}
+
+export function useMarkLessonComplete() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ lessonId, score }: { lessonId: string; score?: number }) =>
+            progressApi.markLessonComplete(lessonId, score),
+        onSuccess: (data, variables) => {
+            // Invalidar queries relacionadas
+            queryClient.invalidateQueries({ queryKey: ['lesson-progress', variables.lessonId] });
+            queryClient.invalidateQueries({ queryKey: ['student-course-progress'] });
+            queryClient.invalidateQueries({ queryKey: ['student-enrollments'] });
+
+            toast.success('¡Lección completada!');
+        },
+        onError: (error) => {
+            console.error('Error marking lesson complete:', error);
+            toast.error('Error al marcar la lección como completada');
+        }
+    });
+}
+
+export function useAutoCompleteVideo() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (lessonId: string) => progressApi.autoCompleteVideoLesson(lessonId),
+        onSuccess: (data, lessonId) => {
+            // Invalidar queries relacionadas
+            queryClient.invalidateQueries({ queryKey: ['lesson-progress', lessonId] });
+            queryClient.invalidateQueries({ queryKey: ['student-course-progress'] });
+            queryClient.invalidateQueries({ queryKey: ['student-enrollments'] });
+
+            toast.success('¡Video completado automáticamente!');
+        },
+        onError: (error) => {
+            console.error('Error auto-completing video:', error);
+        }
+    });
+}
+
+export function useVideoCheckpoint() {
+    return useMutation({
+        mutationFn: ({ lessonId, progressPercentage }: { lessonId: string; progressPercentage: number }) =>
+            progressApi.handleVideoCheckpoint(lessonId, progressPercentage),
+        onError: (error) => {
+            console.error('Error handling video checkpoint:', error);
+        }
+    });
+}
+
+export function useLessonExit() {
+    return useMutation({
+        mutationFn: ({ lessonId, timeSpentSeconds }: { lessonId: string; timeSpentSeconds: number }) =>
+            progressApi.handleLessonExit(lessonId, timeSpentSeconds),
+        onError: (error) => {
+            console.error('Error handling lesson exit:', error);
+        }
     });
 }
