@@ -1,4 +1,4 @@
-// src/hooks/use-student-courses.ts - CON TIPOS CORRECTOS (SIN ANY)
+// src/hooks/use-student-courses.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { progressApi } from '@/lib/api/progress';
 import { coursesApi } from '@/lib/api/courses';

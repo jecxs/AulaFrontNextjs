@@ -4,7 +4,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { coursesApi } from '@/lib/api/courses';
-import { progressApi } from '@/lib/api/progress';
+import { apiClient } from '@/lib/api/client';
+import { useMarkLessonComplete } from '@/hooks/use-student-courses';
 import {
     ChevronLeft,
     ChevronRight,
@@ -12,7 +13,8 @@ import {
     BookOpen,
     Clock,
     FileText,
-    PlayCircle
+    PlayCircle,
+    Download
 } from 'lucide-react';
 import Link from 'next/link';
 import { ROUTES } from '@/lib/utils/constants';
@@ -41,8 +43,10 @@ export default function LessonPlayerPage() {
 
     const [lessonData, setLessonData] = useState<LessonData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [isCompleting, setIsCompleting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Hook para marcar como completada
+    const markLessonCompleteMutation = useMarkLessonComplete();
 
     useEffect(() => {
         if (courseId && lessonId) {
@@ -55,16 +59,16 @@ export default function LessonPlayerPage() {
             setIsLoading(true);
             setError(null);
 
-            // Cargar datos de la lección
-            const [lesson, course] = await Promise.all([
-                coursesApi.getLesson(lessonId),
-                coursesApi.getCourse(courseId)
-            ]);
+            // ✅ USAR apiClient que maneja automáticamente la autenticación
+            const lesson = await apiClient.get(`/lessons/${lessonId}`);
+            console.log('📚 Lesson data:', lesson);
+
+            const course = await coursesApi.getCourse(courseId);
 
             // Cargar progreso de la lección
             let progress = { isCompleted: false };
             try {
-                progress = await progressApi.checkLessonProgress(lessonId);
+                progress = await apiClient.get(`/progress/check/${lessonId}`);
             } catch (error) {
                 console.warn('Could not load lesson progress:', error);
             }
@@ -91,9 +95,8 @@ export default function LessonPlayerPage() {
     };
 
     const buildNavigation = async (modules: any[], currentLessonId: string) => {
-        const allLessons = [];
+        const allLessons: any[] = [];
 
-        // Obtener todas las lecciones ordenadas
         for (const module of modules) {
             try {
                 const lessons = await coursesApi.getModuleLessons(module.id);
@@ -103,7 +106,6 @@ export default function LessonPlayerPage() {
             }
         }
 
-        // Encontrar la lección actual y sus vecinas
         const currentIndex = allLessons.findIndex(lesson => lesson.id === currentLessonId);
 
         return {
@@ -112,14 +114,21 @@ export default function LessonPlayerPage() {
         };
     };
 
-    // ✅ NUEVA FUNCIÓN SIMPLIFICADA - Completar y continuar
+    // ✅ Función para completar y continuar
     const handleCompleteAndContinue = async () => {
-        if (!lessonData || lessonData.progress.isCompleted) return;
+        if (!lessonData) return;
 
-        setIsCompleting(true);
+        // Si ya está completada, solo navegar
+        if (lessonData.progress.isCompleted) {
+            navigateToNextOrCourse();
+            return;
+        }
+
         try {
-            // Marcar como completada
-            const result = await progressApi.markLessonComplete(lessonId);
+            await markLessonCompleteMutation.mutateAsync({
+                lessonId,
+                score: undefined
+            });
 
             // Actualizar estado local
             setLessonData(prev => prev ? {
@@ -127,34 +136,25 @@ export default function LessonPlayerPage() {
                 progress: { isCompleted: true, completedAt: new Date().toISOString() }
             } : null);
 
-            toast.success('¡Lección completada!');
-
-            // Mostrar progreso del curso
-            if (result.courseProgress) {
-                toast.success(
-                    `Progreso del curso: ${result.courseProgress.progressPercentage}%`,
-                    { duration: 3000 }
-                );
-            }
-
-            // Navegar a la siguiente lección automáticamente después de 1 segundo
+            // Navegar después de un momento
             setTimeout(() => {
-                if (lessonData.navigation.nextLesson) {
-                    router.push(
-                        `${ROUTES.STUDENT.COURSES}/${courseId}/lessons/${lessonData.navigation.nextLesson.id}`
-                    );
-                } else {
-                    // Si no hay siguiente lección, volver al curso
-                    router.push(`${ROUTES.STUDENT.COURSES}/${courseId}`);
-                    toast.success('¡Curso completado! 🎉');
-                }
-            }, 1000);
+                navigateToNextOrCourse();
+            }, 800);
 
         } catch (error: any) {
             console.error('Error completing lesson:', error);
             toast.error('Error al completar la lección');
-        } finally {
-            setIsCompleting(false);
+        }
+    };
+
+    const navigateToNextOrCourse = () => {
+        if (lessonData?.navigation.nextLesson) {
+            router.push(
+                `${ROUTES.STUDENT.COURSES}/${courseId}/lessons/${lessonData.navigation.nextLesson.id}`
+            );
+        } else {
+            router.push(`${ROUTES.STUDENT.COURSES}/${courseId}`);
+            toast.success('¡Curso completado! 🎉', { duration: 4000 });
         }
     };
 
@@ -166,6 +166,14 @@ export default function LessonPlayerPage() {
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
         return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    };
+
+    // ✅ Obtener el primer PDF de los recursos
+    const getPdfResource = () => {
+        if (!lessonData?.lesson.resources) return null;
+        return lessonData.lesson.resources.find((r: any) =>
+            r.fileType === 'application/pdf' || r.isPdf
+        );
     };
 
     if (isLoading) {
@@ -199,6 +207,7 @@ export default function LessonPlayerPage() {
     }
 
     const { lesson, course, module, navigation, progress } = lessonData;
+    const pdfResource = getPdfResource();
 
     return (
         <div className="min-h-screen bg-gray-900 text-white">
@@ -223,7 +232,7 @@ export default function LessonPlayerPage() {
                         {progress.isCompleted && (
                             <div className="flex items-center space-x-2 text-green-400">
                                 <CheckCircle className="w-5 h-5" />
-                                <span className="text-sm font-medium">Completada</span>
+                                <span className="text-sm font-medium">Lección completada</span>
                             </div>
                         )}
                     </div>
@@ -235,79 +244,127 @@ export default function LessonPlayerPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Área de contenido de la lección */}
                     <div className="lg:col-span-2 space-y-6">
-                        {/* Contenedor del video o PDF */}
-                        <div className="bg-black rounded-lg overflow-hidden">
-                            {lesson.type === 'VIDEO' && lesson.videoUrl && (
+                        {/* ✅ REPRODUCTOR DE VIDEO */}
+                        {lesson.type === 'VIDEO' && lesson.videoUrl && (
+                            <div className="bg-black rounded-lg overflow-hidden">
                                 <video
-                                    src={lesson.videoUrl}
+                                    key={lesson.videoUrl}
                                     controls
-                                    className="w-full aspect-video"
                                     controlsList="nodownload"
+                                    className="w-full aspect-video"
+                                    preload="metadata"
                                 >
+                                    <source src={lesson.videoUrl} type="video/mp4" />
                                     Tu navegador no soporta el elemento de video.
                                 </video>
-                            )}
+                            </div>
+                        )}
 
-                            {lesson.type === 'TEXT' && lesson.pdfUrl && (
+                        {/* ✅ VISOR DE PDF CON DESCARGA */}
+                        {lesson.type === 'TEXT' && pdfResource && (
+                            <div className="bg-white rounded-lg overflow-hidden">
+                                {/* Header con botón de descarga */}
+                                <div className="bg-gray-100 p-4 border-b border-gray-200 flex items-center justify-between">
+                                    <div className="flex items-center space-x-2 text-gray-700">
+                                        <FileText className="w-5 h-5" />
+                                        <span className="font-medium">{pdfResource.fileName}</span>
+                                    </div>
+                                    <a
+                                        href={pdfResource.fileUrl}
+                                        download={pdfResource.fileName}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                        <span>Descargar PDF</span>
+                                    </a>
+                                </div>
+
+                                {/* Visor de PDF */}
                                 <iframe
-                                    src={lesson.pdfUrl}
-                                    className="w-full h-[600px]"
+                                    src={`${pdfResource.fileUrl}#toolbar=1&navpanes=0&scrollbar=1`}
+                                    className="w-full h-[700px]"
                                     title={lesson.title}
                                 />
-                            )}
+                            </div>
+                        )}
 
-                            {lesson.type === 'TEXT' && lesson.markdownContent && !lesson.pdfUrl && (
-                                <div className="bg-white text-gray-900 p-8">
-                                    <div className="prose max-w-none">
-                                        <div dangerouslySetInnerHTML={{ __html: lesson.markdownContent }} />
-                                    </div>
+                        {/* ✅ CONTENIDO MARKDOWN */}
+                        {lesson.type === 'TEXT' && lesson.markdownContent && !pdfResource && (
+                            <div className="bg-white rounded-lg p-8">
+                                <div className="prose prose-lg max-w-none text-gray-900">
+                                    <div dangerouslySetInnerHTML={{ __html: lesson.markdownContent }} />
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
 
-                        {/* ✅ BOTÓN PRINCIPAL: "Completar y Continuar" */}
+                        {/* ✅ MENSAJE SI NO HAY CONTENIDO */}
+                        {lesson.type === 'TEXT' && !pdfResource && !lesson.markdownContent && (
+                            <div className="bg-gray-800 rounded-lg p-12 text-center">
+                                <FileText className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                                <h3 className="text-lg font-semibold text-gray-300 mb-2">
+                                    Esta lección incluye un PDF
+                                </h3>
+                                <p className="text-gray-500">
+                                    El contenido está siendo cargado
+                                </p>
+                            </div>
+                        )}
+
+                        {/* ✅ BOTÓN QUE CAMBIA SEGÚN EL ESTADO */}
                         <div className="bg-gray-800 rounded-lg p-6">
-                            {!progress.isCompleted ? (
-                                <button
-                                    onClick={handleCompleteAndContinue}
-                                    disabled={isCompleting}
-                                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400
-                                             text-white font-semibold py-4 px-6 rounded-lg
-                                             transition-colors flex items-center justify-center space-x-2"
-                                >
-                                    {isCompleting ? (
-                                        <>
-                                            <LoadingSpinner size="sm" />
-                                            <span>Completando...</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <CheckCircle className="w-5 h-5" />
-                                            <span>Completar y Continuar</span>
-                                            {navigation.nextLesson && (
-                                                <ChevronRight className="w-5 h-5" />
-                                            )}
-                                        </>
-                                    )}
-                                </button>
-                            ) : (
-                                <div className="text-center">
-                                    <div className="inline-flex items-center space-x-2 text-green-400 mb-4">
-                                        <CheckCircle className="w-6 h-6" />
-                                        <span className="font-semibold">Lección completada</span>
-                                    </div>
-                                    {navigation.nextLesson && (
-                                        <button
-                                            onClick={() => navigateToLesson(navigation.nextLesson.id)}
-                                            className="w-full bg-gray-700 hover:bg-gray-600 text-white
-                                                     font-medium py-3 px-6 rounded-lg transition-colors
-                                                     flex items-center justify-center space-x-2"
-                                        >
-                                            <span>Siguiente lección</span>
+                            <button
+                                onClick={handleCompleteAndContinue}
+                                disabled={markLessonCompleteMutation.isPending}
+                                className={`w-full font-semibold py-4 px-6 rounded-lg 
+                                         transition-colors flex items-center justify-center space-x-2
+                                         disabled:cursor-not-allowed ${
+                                    progress.isCompleted
+                                        ? 'bg-green-600 hover:bg-green-700 disabled:bg-green-400'
+                                        : 'bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400'
+                                } text-white`}
+                            >
+                                {markLessonCompleteMutation.isPending ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        <span>Completando...</span>
+                                    </>
+                                ) : progress.isCompleted ? (
+                                    <>
+                                        <CheckCircle className="w-5 h-5" />
+                                        <span>Continuar</span>
+                                        {navigation.nextLesson && (
                                             <ChevronRight className="w-5 h-5" />
-                                        </button>
+                                        )}
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle className="w-5 h-5" />
+                                        <span>Completar y Continuar</span>
+                                        {navigation.nextLesson && (
+                                            <ChevronRight className="w-5 h-5" />
+                                        )}
+                                    </>
+                                )}
+                            </button>
+
+                            {/* Mensaje adicional si está completada */}
+                            {progress.isCompleted && (
+                                <p className="text-center text-sm text-gray-400 mt-3">
+                                    ✓ Lección marcada como completada
+                                    {progress.completedAt && (
+                                        <span className="block mt-1">
+                                            {new Date(progress.completedAt).toLocaleDateString('es-ES', {
+                                                day: 'numeric',
+                                                month: 'long',
+                                                year: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
+                                        </span>
                                     )}
-                                </div>
+                                </p>
                             )}
                         </div>
 
@@ -328,11 +385,13 @@ export default function LessonPlayerPage() {
                             <div className="space-y-3 text-sm">
                                 <div className="flex items-center space-x-3 text-gray-300">
                                     {lesson.type === 'VIDEO' ? (
-                                        <PlayCircle className="w-5 h-5" />
+                                        <PlayCircle className="w-5 h-5 text-blue-400" />
                                     ) : (
-                                        <FileText className="w-5 h-5" />
+                                        <FileText className="w-5 h-5 text-green-400" />
                                     )}
-                                    <span className="capitalize">{lesson.type.toLowerCase()}</span>
+                                    <span className="capitalize">
+                                        {lesson.type === 'VIDEO' ? 'Video' : 'Texto'}
+                                    </span>
                                 </div>
                                 {lesson.durationSec && (
                                     <div className="flex items-center space-x-3 text-gray-300">
@@ -359,7 +418,7 @@ export default function LessonPlayerPage() {
                                                 <p className="text-gray-400 text-xs uppercase tracking-wide">
                                                     Anterior
                                                 </p>
-                                                <p className="text-white text-sm font-medium">
+                                                <p className="text-white text-sm font-medium line-clamp-1">
                                                     {navigation.previousLesson.title}
                                                 </p>
                                             </div>
@@ -382,7 +441,7 @@ export default function LessonPlayerPage() {
                                                 <p className="text-blue-200 text-xs uppercase tracking-wide">
                                                     Siguiente
                                                 </p>
-                                                <p className="text-white text-sm font-medium">
+                                                <p className="text-white text-sm font-medium line-clamp-1">
                                                     {navigation.nextLesson.title}
                                                 </p>
                                             </div>
