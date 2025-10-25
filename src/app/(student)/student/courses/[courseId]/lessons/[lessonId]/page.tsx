@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { coursesApi } from '@/lib/api/courses';
-import { apiClient } from '@/lib/api/client';
+import { progressApi } from '@/lib/api/progress';
 import { useMarkLessonComplete } from '@/hooks/use-student-courses';
 import {
     ChevronLeft,
@@ -59,16 +59,16 @@ export default function LessonPlayerPage() {
             setIsLoading(true);
             setError(null);
 
-            // ✅ USAR apiClient que maneja automáticamente la autenticación
-            const lesson = await apiClient.get(`/lessons/${lessonId}`);
-            console.log('📚 Lesson data:', lesson);
+            // ✅ USAR APICLIENT - Mantiene el token automáticamente
+            const lesson = await coursesApi.getLesson(lessonId);
+            console.log('📚 Lesson data:', lesson); // Debug
 
             const course = await coursesApi.getCourse(courseId);
 
             // Cargar progreso de la lección
             let progress = { isCompleted: false };
             try {
-                progress = await apiClient.get(`/progress/check/${lessonId}`);
+                progress = await progressApi.checkLessonProgress(lessonId);
             } catch (error) {
                 console.warn('Could not load lesson progress:', error);
             }
