@@ -1,10 +1,11 @@
-// src/lib/api/courses.ts
+// src/lib/api/courses.ts -
 import { apiClient } from './client';
 import { Course, Module, Lesson, CourseProgress } from '@/types/course';
+import { MyEnrollmentsResponse } from '@/types/enrollment';
 
 export const coursesApi = {
     // Obtener mis cursos enrollados
-    getMyEnrollments: async (): Promise<{ data: any[], total: number }> => {
+    getMyEnrollments: async (): Promise<MyEnrollmentsResponse> => {
         return apiClient.get('/enrollments/my-courses');
     },
 
