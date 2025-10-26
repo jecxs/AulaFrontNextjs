@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { coursesApi } from '@/lib/api/courses';
 import { progressApi } from '@/lib/api/progress';
 import { useMarkLessonComplete } from '@/hooks/use-student-courses';
+
 import {
     ChevronLeft,
     ChevronRight,
@@ -19,6 +20,7 @@ import {
 import Link from 'next/link';
 import { ROUTES } from '@/lib/utils/constants';
 import LoadingSpinner from '@/components/ui/loading-spinner';
+import VideoPlayer from '@/components/course/VideoPlayer';
 import { toast } from 'react-hot-toast';
 
 interface LessonData {
@@ -246,18 +248,19 @@ export default function LessonPlayerPage() {
                     <div className="lg:col-span-2 space-y-6">
                         {/* ✅ REPRODUCTOR DE VIDEO */}
                         {lesson.type === 'VIDEO' && lesson.videoUrl && (
-                            <div className="bg-black rounded-lg overflow-hidden">
-                                <video
-                                    key={lesson.videoUrl}
-                                    controls
-                                    controlsList="nodownload"
-                                    className="w-full aspect-video"
-                                    preload="metadata"
-                                >
-                                    <source src={lesson.videoUrl} type="video/mp4" />
-                                    Tu navegador no soporta el elemento de video.
-                                </video>
-                            </div>
+                            <VideoPlayer
+                                src={lesson.videoUrl}
+                                onTimeUpdate={(time) => {
+                                    // Opcional: Guardar progreso del video
+                                    console.log('Video progress:', time);
+                                }}
+                                onEnded={() => {
+                                    // Opcional: Marcar como completada cuando termine el video
+                                    console.log('Video ended');
+                                    toast.success('¡Video completado! 🎉');
+                                }}
+                                className="w-full"
+                            />
                         )}
 
                         {/* ✅ VISOR DE PDF CON DESCARGA */}
