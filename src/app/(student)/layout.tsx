@@ -27,7 +27,7 @@ export default function StudentLayout({
                 <StudentNavbar />
                 <div className="flex">
                     <StudentSidebar />
-                    <main className="flex-1 lg:ml-64">
+                    <main className="flex-1 lg:ml-64 pt-16">
                         <div className="py-6 px-4 sm:px-6 lg:px-8">
                             {children}
                         </div>
