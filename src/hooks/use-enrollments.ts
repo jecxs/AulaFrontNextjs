@@ -1,16 +1,18 @@
 // src/hooks/use-enrollments.ts
 'use client';
 
-import { useState } from 'react';
+import {getErrorMessage} from '@/types/api';
+import {useState} from 'react';
 import {
-    enrollmentsApi,
-    CreateEnrollmentDto,
-    UpdateEnrollmentDto,
-    EnrollmentWithProgress,
-    EnrollmentListResponse,
-    EnrollmentStats,
+    CheckAccessResponse, CheckLessonAccessResponse,
     CourseEnrollmentStats,
+    CreateEnrollmentDto,
+    EnrollmentListResponse,
     EnrollmentProgress,
+    enrollmentsApi,
+    EnrollmentStats,
+    EnrollmentWithProgress,
+    UpdateEnrollmentDto,
 } from '@/lib/api/enrollments';
 
 export function useEnrollments() {
@@ -26,11 +28,9 @@ export function useEnrollments() {
         setIsLoading(true);
         setError(null);
         try {
-            const enrollment = await enrollmentsApi.create(data);
-            return enrollment;
-        } catch (err: any) {
-            const errorMessage =
-                err.response?.data?.message || 'Error al crear enrollment';
+            return await enrollmentsApi.create(data);
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, 'Error al crear enrollment');
             setError(errorMessage);
             throw err;
         } finally {
@@ -54,17 +54,16 @@ export function useEnrollments() {
         setIsLoading(true);
         setError(null);
         try {
-            const response = await enrollmentsApi.getAll(params);
-            return response;
-        } catch (err: any) {
-            const errorMessage =
-                err.response?.data?.message || 'Error al cargar enrollments';
+            return await enrollmentsApi.getAll(params);
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, 'Error al cargar enrollments');
             setError(errorMessage);
             throw err;
         } finally {
             setIsLoading(false);
         }
     };
+
 
     /**
      * Obtener enrollment por ID
@@ -75,11 +74,9 @@ export function useEnrollments() {
         setIsLoading(true);
         setError(null);
         try {
-            const enrollment = await enrollmentsApi.getById(id);
-            return enrollment;
-        } catch (err: any) {
-            const errorMessage =
-                err.response?.data?.message || 'Error al cargar enrollment';
+            return await enrollmentsApi.getById(id);
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, 'Error al cargar enrollment');
             setError(errorMessage);
             throw err;
         } finally {
@@ -97,11 +94,9 @@ export function useEnrollments() {
         setIsLoading(true);
         setError(null);
         try {
-            const enrollment = await enrollmentsApi.update(id, data);
-            return enrollment;
-        } catch (err: any) {
-            const errorMessage =
-                err.response?.data?.message || 'Error al actualizar enrollment';
+            return await enrollmentsApi.update(id, data);
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(error, 'Error al actualizar enrollment');
             setError(errorMessage);
             throw err;
         } finally {
@@ -118,11 +113,9 @@ export function useEnrollments() {
         setIsLoading(true);
         setError(null);
         try {
-            const enrollment = await enrollmentsApi.suspend(id);
-            return enrollment;
-        } catch (err: any) {
-            const errorMessage =
-                err.response?.data?.message || 'Error al suspender enrollment';
+            return await enrollmentsApi.suspend(id);
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, 'Error al suspender enrollment');
             setError(errorMessage);
             throw err;
         } finally {
@@ -139,11 +132,9 @@ export function useEnrollments() {
         setIsLoading(true);
         setError(null);
         try {
-            const enrollment = await enrollmentsApi.activate(id);
-            return enrollment;
-        } catch (err: any) {
-            const errorMessage =
-                err.response?.data?.message || 'Error al activar enrollment';
+            return await enrollmentsApi.activate(id);
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, 'Error al activar enrollment');
             setError(errorMessage);
             throw err;
         } finally {
@@ -160,11 +151,9 @@ export function useEnrollments() {
         setIsLoading(true);
         setError(null);
         try {
-            const enrollment = await enrollmentsApi.complete(id);
-            return enrollment;
-        } catch (err: any) {
-            const errorMessage =
-                err.response?.data?.message || 'Error al completar enrollment';
+            return await enrollmentsApi.complete(id);
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, 'Error al completar enrollment');
             setError(errorMessage);
             throw err;
         } finally {
@@ -181,11 +170,9 @@ export function useEnrollments() {
         setIsLoading(true);
         setError(null);
         try {
-            const enrollment = await enrollmentsApi.confirmPayment(id);
-            return enrollment;
-        } catch (err: any) {
-            const errorMessage =
-                err.response?.data?.message || 'Error al confirmar pago';
+            return await enrollmentsApi.confirmPayment(id);
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, 'Error al confirmar pago');
             setError(errorMessage);
             throw err;
         } finally {
@@ -201,9 +188,8 @@ export function useEnrollments() {
         setError(null);
         try {
             await enrollmentsApi.delete(id);
-        } catch (err: any) {
-            const errorMessage =
-                err.response?.data?.message || 'Error al eliminar enrollment';
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, 'Error al eliminar enrollment');
             setError(errorMessage);
             throw err;
         } finally {
@@ -225,15 +211,12 @@ export function useEnrollments() {
         setIsLoading(true);
         setError(null);
         try {
-            const response = await enrollmentsApi.getUserEnrollments(
+            return await enrollmentsApi.getUserEnrollments(
                 userId,
                 params
             );
-            return response;
-        } catch (err: any) {
-            const errorMessage =
-                err.response?.data?.message ||
-                'Error al cargar enrollments del usuario';
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, 'Error al cargar enrollments de usuario');
             setError(errorMessage);
             throw err;
         } finally {
@@ -255,15 +238,12 @@ export function useEnrollments() {
         setIsLoading(true);
         setError(null);
         try {
-            const response = await enrollmentsApi.getCourseEnrollments(
+            return await enrollmentsApi.getCourseEnrollments(
                 courseId,
                 params
             );
-            return response;
-        } catch (err: any) {
-            const errorMessage =
-                err.response?.data?.message ||
-                'Error al cargar enrollments del curso';
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, 'Error al cargar enrollments del curso');
             setError(errorMessage);
             throw err;
         } finally {
@@ -278,11 +258,9 @@ export function useEnrollments() {
         setIsLoading(true);
         setError(null);
         try {
-            const stats = await enrollmentsApi.getStats();
-            return stats;
-        } catch (err: any) {
-            const errorMessage =
-                err.response?.data?.message || 'Error al cargar estadísticas';
+            return await enrollmentsApi.getStats();
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, 'Error al cargar estadisticas de enrollments');
             setError(errorMessage);
             throw err;
         } finally {
@@ -299,12 +277,9 @@ export function useEnrollments() {
         setIsLoading(true);
         setError(null);
         try {
-            const stats = await enrollmentsApi.getCourseStats(courseId);
-            return stats;
-        } catch (err: any) {
-            const errorMessage =
-                err.response?.data?.message ||
-                'Error al cargar estadísticas del curso';
+            return await enrollmentsApi.getCourseStats(courseId);
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, 'Error al cargar estadisticas de enrollments de un curso');
             setError(errorMessage);
             throw err;
         } finally {
@@ -321,12 +296,9 @@ export function useEnrollments() {
         setIsLoading(true);
         setError(null);
         try {
-            const enrollments = await enrollmentsApi.getExpiringSoon(days);
-            return enrollments;
-        } catch (err: any) {
-            const errorMessage =
-                err.response?.data?.message ||
-                'Error al cargar enrollments próximos a expirar';
+            return await enrollmentsApi.getExpiringSoon(days);
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, 'Error al cargar enrollments por vencer');
             setError(errorMessage);
             throw err;
         } finally {
@@ -344,12 +316,9 @@ export function useEnrollments() {
         setIsLoading(true);
         setError(null);
         try {
-            const response = await enrollmentsApi.getPendingPayment(params);
-            return response;
-        } catch (err: any) {
-            const errorMessage =
-                err.response?.data?.message ||
-                'Error al cargar enrollments pendientes de pago';
+            return await enrollmentsApi.getPendingPayment(params);
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, 'Error al cargar enrollments pendientes de pago');
             setError(errorMessage);
             throw err;
         } finally {
@@ -367,12 +336,9 @@ export function useEnrollments() {
         setIsLoading(true);
         setError(null);
         try {
-            const response = await enrollmentsApi.getExpired(params);
-            return response;
-        } catch (err: any) {
-            const errorMessage =
-                err.response?.data?.message ||
-                'Error al cargar enrollments expirados';
+            return await enrollmentsApi.getExpired(params);
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, 'Error al cargar enrollments expirados');
             setError(errorMessage);
             throw err;
         } finally {
@@ -389,11 +355,9 @@ export function useEnrollments() {
         setIsLoading(true);
         setError(null);
         try {
-            const progress = await enrollmentsApi.getProgress(enrollmentId);
-            return progress;
-        } catch (err: any) {
-            const errorMessage =
-                err.response?.data?.message || 'Error al cargar progreso';
+            return await enrollmentsApi.getProgress(enrollmentId);
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, 'Error al cargar progreso');
             setError(errorMessage);
             throw err;
         } finally {
@@ -404,15 +368,13 @@ export function useEnrollments() {
     /**
      * Verificar acceso de usuario a un curso
      */
-    const checkUserAccess = async (courseId: string, userId: string) => {
+    const checkUserAccess = async (courseId: string, userId: string): Promise<CheckAccessResponse>  => {
         setIsLoading(true);
         setError(null);
         try {
-            const result = await enrollmentsApi.checkAccess(courseId, userId);
-            return result;
-        } catch (err: any) {
-            const errorMessage =
-                err.response?.data?.message || 'Error al verificar acceso';
+            return await enrollmentsApi.checkAccess(courseId, userId);
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, 'Error al Verificar acceso de usuario a un curso');
             setError(errorMessage);
             throw err;
         } finally {
@@ -427,20 +389,17 @@ export function useEnrollments() {
         courseId: string,
         lessonId: string,
         userId: string
-    ) => {
+    ): Promise<CheckLessonAccessResponse> => {
         setIsLoading(true);
         setError(null);
         try {
-            const result = await enrollmentsApi.checkLessonAccess(
+            return await enrollmentsApi.checkLessonAccess(
                 courseId,
                 lessonId,
                 userId
             );
-            return result;
-        } catch (err: any) {
-            const errorMessage =
-                err.response?.data?.message ||
-                'Error al verificar acceso a la lección';
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, 'Error al Verificar acceso de usuario a una lección');
             setError(errorMessage);
             throw err;
         } finally {

@@ -105,6 +105,20 @@ export interface CourseEnrollmentStats extends EnrollmentStats {
     };
 }
 
+export interface CheckAccessResponse {
+    hasAccess: boolean;
+    reason: string;
+    enrollment: EnrollmentWithProgress | null;
+}
+
+export interface CheckLessonAccessResponse extends CheckAccessResponse {
+    lesson?: {
+        id: string;
+        title: string;
+        order: number;
+    };
+}
+
 // ========== API FUNCTIONS ==========
 
 export const enrollmentsApi = {
@@ -290,15 +304,12 @@ export const enrollmentsApi = {
     checkAccess: async (
         courseId: string,
         userId: string
-    ): Promise<{
-        hasAccess: boolean;
-        reason: string;
-        enrollment: EnrollmentWithProgress | null;
-    }> => {
-        return apiClient.get(
+    ): Promise<CheckAccessResponse> => {
+        return apiClient.get<CheckAccessResponse>(
             `/enrollments/check-access/${courseId}/${userId}`
         );
     },
+
 
     /**
      * Verificar acceso de usuario a una lección específica
@@ -307,13 +318,8 @@ export const enrollmentsApi = {
         courseId: string,
         lessonId: string,
         userId: string
-    ): Promise<{
-        hasAccess: boolean;
-        reason: string;
-        enrollment: EnrollmentWithProgress | null;
-        lesson?: any;
-    }> => {
-        return apiClient.get(
+    ): Promise<CheckLessonAccessResponse> => {
+        return apiClient.get<CheckLessonAccessResponse>(
             `/enrollments/check-access/${courseId}/${lessonId}/${userId}`
         );
     },
