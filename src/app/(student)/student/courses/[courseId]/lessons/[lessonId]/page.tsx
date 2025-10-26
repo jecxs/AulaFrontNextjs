@@ -242,10 +242,10 @@ export default function LessonPlayerPage() {
             </div>
 
             {/* Contenido principal */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="w-full px-4 sm:px-6 lg:px-12 xl:px-16 py-8">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 max-w-[1600px] mx-auto">
                     {/* Área de contenido de la lección */}
-                    <div className="lg:col-span-2 space-y-6">
+                    <div className="lg:col-span-3 space-y-6">
                         {/* ✅ REPRODUCTOR DE VIDEO */}
                         {lesson.type === 'VIDEO' && lesson.videoUrl && (
                             <VideoPlayer

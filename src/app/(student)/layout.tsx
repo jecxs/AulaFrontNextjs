@@ -1,4 +1,3 @@
-// src/app/(student)/layout.tsx
 'use client';
 
 import { StudentGuard } from '@/lib/auth/guards';
@@ -21,14 +20,28 @@ export default function StudentLayout({
                                       }: {
     children: React.ReactNode;
 }) {
+    const pathname = usePathname();
+
+    // ✅ NUEVO: Detectar si estamos en una ruta de lecciones
+    const isLessonView = pathname.includes('/lessons/');
+
     return (
         <StudentGuard>
             <div className="min-h-screen bg-gray-50">
-                <StudentNavbar />
+                {/* ✅ NUEVO: Ocultar navbar en vista de lecciones */}
+                {!isLessonView && <StudentNavbar />}
+
                 <div className="flex">
-                    <StudentSidebar />
-                    <main className="flex-1 lg:ml-64 pt-16">
-                        <div className="py-6 px-4 sm:px-6 lg:px-8">
+                    {/* ✅ NUEVO: Ocultar sidebar en vista de lecciones */}
+                    {!isLessonView && <StudentSidebar />}
+
+                    {/* ✅ MODIFICADO: No aplicar margen ni padding en lecciones */}
+                    <main className={cn(
+                        "flex-1",
+                        !isLessonView && "lg:ml-64 pt-16"
+                    )}>
+                        {/* ✅ MODIFICADO: No aplicar padding interno en lecciones */}
+                        <div className={!isLessonView ? "py-6 px-4 sm:px-6 lg:px-8" : ""}>
                             {children}
                         </div>
                     </main>
@@ -49,9 +62,9 @@ function StudentNavbar() {
                         <h1 className="text-xl font-bold text-gray-900">{APP_NAME}</h1>
                     </div>
                     <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-700">
-              {user?.firstName} {user?.lastName}
-            </span>
+                        <span className="text-sm text-gray-700">
+                            {user?.firstName} {user?.lastName}
+                        </span>
                         <button
                             onClick={logout}
                             className="text-gray-500 hover:text-gray-700 p-2 rounded-md"
@@ -71,7 +84,7 @@ function StudentSidebar() {
 
     return (
         <div className="hidden lg:flex lg:flex-shrink-0">
-            <div className="flex flex-col w-64 bg-white border-r border-gray-200 pt-16 pb-4 overflow-y-auto">
+            <div className="flex flex-col w-64 bg-white border-r border-gray-200 pt-16 pb-4 overflow-y-auto fixed h-full">
                 <nav className="mt-5 flex-1 px-2 space-y-1">
                     {studentNavigation.map((item) => {
                         const isActive = pathname === item.href;
