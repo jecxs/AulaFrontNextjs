@@ -170,10 +170,10 @@ export default function LessonPlayerPage() {
         return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
     };
 
-    // ✅ Obtener el primer PDF de los recursos
-    const getPdfResource = () => {
-        if (!lessonData?.lesson.resources) return null;
-        return lessonData.lesson.resources.find((r: any) =>
+    // ✅ Obtener recursos (PDFs) de la lección
+    const getResources = () => {
+        if (!lessonData?.lesson.resources) return [];
+        return lessonData.lesson.resources.filter((r: any) =>
             r.fileType === 'application/pdf' || r.isPdf
         );
     };
@@ -209,7 +209,7 @@ export default function LessonPlayerPage() {
     }
 
     const { lesson, course, module, navigation, progress } = lessonData;
-    const pdfResource = getPdfResource();
+    const resources = getResources();
 
     return (
         <div className="min-h-screen bg-gray-900 text-white">
@@ -263,38 +263,87 @@ export default function LessonPlayerPage() {
                             />
                         )}
 
-                        {/* ✅ VISOR DE PDF CON DESCARGA */}
-                        {lesson.type === 'TEXT' && pdfResource && (
-                            <div className="bg-white rounded-lg overflow-hidden">
-                                {/* Header con botón de descarga */}
-                                <div className="bg-gray-100 p-4 border-b border-gray-200 flex items-center justify-between">
-                                    <div className="flex items-center space-x-2 text-gray-700">
-                                        <FileText className="w-5 h-5" />
-                                        <span className="font-medium">{pdfResource.fileName}</span>
+                        {/* SECCIÓN DE RECURSOS */}
+                        {resources.length > 0 && (
+                            <>
+                                {/* Si es VIDEO: mostrar solo lista compacta */}
+                                {lesson.type === 'VIDEO' && (
+                                    <div className="bg-gray-800 rounded-lg p-6">
+                                        <h2 className="text-xl font-bold mb-4 flex items-center space-x-2">
+                                            <FileText className="w-6 h-6 text-blue-400" />
+                                            <span>Recursos de la lección</span>
+                                        </h2>
+                                        <div className="space-y-3">
+                                            {resources.map((resource: any) => (
+                                                <div
+                                                    key={resource.id}
+                                                    className="bg-gray-700 rounded-lg p-4 flex items-center justify-between hover:bg-gray-600 transition-colors"
+                                                >
+                                                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                                        <div className="flex-shrink-0 w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                                                            <FileText className="w-5 h-5 text-blue-400" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="font-medium text-white truncate">
+                                                                {resource.fileName}
+                                                            </p>
+                                                            {resource.sizeKb && (
+                                                                <p className="text-sm text-gray-400">
+                                                                    {resource.sizeKb < 1024
+                                                                        ? `${resource.sizeKb} KB`
+                                                                        : `${(resource.sizeKb / 1024).toFixed(2)} MB`
+                                                                    }
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <a
+                                                    href={resource.fileUrl || resource.downloadUrl}
+                                                    download={resource.fileName}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex-shrink-0 flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                                                    >
+                                                    <Download className="w-4 h-4" />
+                                                    <span>Descargar</span>
+                                                </a>
+                                                </div>
+                                                ))}
+                                        </div>
                                     </div>
-                                    <a
-                                        href={pdfResource.fileUrl}
-                                        download={pdfResource.fileName}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                                    >
-                                        <Download className="w-4 h-4" />
-                                        <span>Descargar PDF</span>
-                                    </a>
-                                </div>
+                                )}
 
-                                {/* Visor de PDF */}
-                                <iframe
-                                    src={`${pdfResource.fileUrl}#toolbar=1&navpanes=0&scrollbar=1`}
-                                    className="w-full h-[700px]"
-                                    title={lesson.title}
-                                />
+                                {/* Si es TEXT: mostrar visor completo de PDF */}
+                                {lesson.type === 'TEXT' && resources.map((resource: any) => (
+                                    <div key={resource.id} className="bg-white rounded-lg overflow-hidden">
+                                        <div className="bg-gray-100 p-4 border-b border-gray-200 flex items-center justify-between">
+                                            <div className="flex items-center space-x-2 text-gray-700">
+                                                <FileText className="w-5 h-5" />
+                                                <span className="font-medium">{resource.fileName}</span>
+                                            </div>
+                                            <a
+                                            href={resource.fileUrl || resource.downloadUrl}
+                                            download={resource.fileName}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                                            >
+                                            <Download className="w-4 h-4" />
+                                            <span>Descargar PDF</span>
+                                        </a>
+                                    </div>
+                                    <iframe
+                                    src={`${resource.fileUrl || resource.downloadUrl}#toolbar=1&navpanes=0&scrollbar=1`}
+                                className="w-full h-[700px]"
+                                title={resource.fileName}
+                            />
                             </div>
-                        )}
+                        ))}
+                    </>
+                    )}
 
-                        {/* ✅ CONTENIDO MARKDOWN */}
-                        {lesson.type === 'TEXT' && lesson.markdownContent && !pdfResource && (
+                        {/* CONTENIDO MARKDOWN (solo para lecciones tipo TEXT sin video) */}
+                        {lesson.type === 'TEXT' && lesson.markdownContent && !lesson.videoUrl && (
                             <div className="bg-white rounded-lg p-8">
                                 <div className="prose prose-lg max-w-none text-gray-900">
                                     <div dangerouslySetInnerHTML={{ __html: lesson.markdownContent }} />
@@ -303,14 +352,14 @@ export default function LessonPlayerPage() {
                         )}
 
                         {/* ✅ MENSAJE SI NO HAY CONTENIDO */}
-                        {lesson.type === 'TEXT' && !pdfResource && !lesson.markdownContent && (
+                        {lesson.type === 'TEXT' && !lesson.videoUrl && resources.length === 0 && !lesson.markdownContent && (
                             <div className="bg-gray-800 rounded-lg p-12 text-center">
                                 <FileText className="w-16 h-16 text-gray-600 mx-auto mb-4" />
                                 <h3 className="text-lg font-semibold text-gray-300 mb-2">
-                                    Esta lección incluye un PDF
+                                    Sin contenido disponible
                                 </h3>
                                 <p className="text-gray-500">
-                                    El contenido está siendo cargado
+                                    Esta lección no tiene contenido cargado aún
                                 </p>
                             </div>
                         )}
@@ -330,45 +379,25 @@ export default function LessonPlayerPage() {
                             >
                                 {markLessonCompleteMutation.isPending ? (
                                     <>
-                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                        <span>Completando...</span>
+                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        <span>Procesando...</span>
                                     </>
                                 ) : progress.isCompleted ? (
                                     <>
                                         <CheckCircle className="w-5 h-5" />
-                                        <span>Continuar</span>
-                                        {navigation.nextLesson && (
-                                            <ChevronRight className="w-5 h-5" />
-                                        )}
+                                        <span>
+                                            {navigation.nextLesson ? 'Ir a siguiente lección' : 'Volver al curso'}
+                                        </span>
+                                        <ChevronRight className="w-5 h-5" />
                                     </>
                                 ) : (
                                     <>
                                         <CheckCircle className="w-5 h-5" />
-                                        <span>Completar y Continuar</span>
-                                        {navigation.nextLesson && (
-                                            <ChevronRight className="w-5 h-5" />
-                                        )}
+                                        <span>Marcar como completada y continuar</span>
+                                        <ChevronRight className="w-5 h-5" />
                                     </>
                                 )}
                             </button>
-
-                            {/* Mensaje adicional si está completada */}
-                            {progress.isCompleted && (
-                                <p className="text-center text-sm text-gray-400 mt-3">
-                                    ✓ Lección marcada como completada
-                                    {progress.completedAt && (
-                                        <span className="block mt-1">
-                                            {new Date(progress.completedAt).toLocaleDateString('es-ES', {
-                                                day: 'numeric',
-                                                month: 'long',
-                                                year: 'numeric',
-                                                hour: '2-digit',
-                                                minute: '2-digit'
-                                            })}
-                                        </span>
-                                    )}
-                                </p>
-                            )}
                         </div>
 
                         {/* Descripción de la lección */}
@@ -402,6 +431,12 @@ export default function LessonPlayerPage() {
                                         <span>{formatDuration(lesson.durationSec)}</span>
                                     </div>
                                 )}
+                                {resources.length > 0 && (
+                                    <div className="flex items-center space-x-3 text-gray-300">
+                                        <FileText className="w-5 h-5" />
+                                        <span>{resources.length} recurso{resources.length !== 1 ? 's' : ''} disponible{resources.length !== 1 ? 's' : ''}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -412,51 +447,54 @@ export default function LessonPlayerPage() {
                                 {navigation.previousLesson ? (
                                     <button
                                         onClick={() => navigateToLesson(navigation.previousLesson.id)}
-                                        className="w-full text-left p-3 bg-gray-700 hover:bg-gray-600
-                                                 rounded-lg transition-colors group"
+                                        className="w-full flex items-center justify-between p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
                                     >
-                                        <div className="flex items-center space-x-3">
-                                            <ChevronLeft className="w-4 h-4 text-gray-400 group-hover:text-white" />
-                                            <div>
-                                                <p className="text-gray-400 text-xs uppercase tracking-wide">
-                                                    Anterior
-                                                </p>
-                                                <p className="text-white text-sm font-medium line-clamp-1">
-                                                    {navigation.previousLesson.title}
-                                                </p>
-                                            </div>
+                                        <div className="flex items-center space-x-2">
+                                            <ChevronLeft className="w-4 h-4" />
+                                            <span className="text-sm">Anterior</span>
                                         </div>
+                                        <span className="text-xs text-gray-400 truncate max-w-[150px]">
+                                            {navigation.previousLesson.title}
+                                        </span>
                                     </button>
                                 ) : (
-                                    <div className="p-3 bg-gray-700/50 rounded-lg">
-                                        <p className="text-gray-500 text-sm">Primera lección del curso</p>
+                                    <div className="p-3 bg-gray-700/50 rounded-lg text-center text-sm text-gray-500">
+                                        Primera lección
                                     </div>
                                 )}
 
                                 {navigation.nextLesson ? (
                                     <button
                                         onClick={() => navigateToLesson(navigation.nextLesson.id)}
-                                        className="w-full text-left p-3 bg-blue-600 hover:bg-blue-700
-                                                 rounded-lg transition-colors group"
+                                        className="w-full flex items-center justify-between p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
                                     >
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-blue-200 text-xs uppercase tracking-wide">
-                                                    Siguiente
-                                                </p>
-                                                <p className="text-white text-sm font-medium line-clamp-1">
-                                                    {navigation.nextLesson.title}
-                                                </p>
-                                            </div>
-                                            <ChevronRight className="w-4 h-4 text-blue-200 group-hover:text-white" />
+                                        <span className="text-xs text-gray-400 truncate max-w-[150px]">
+                                            {navigation.nextLesson.title}
+                                        </span>
+                                        <div className="flex items-center space-x-2">
+                                            <span className="text-sm">Siguiente</span>
+                                            <ChevronRight className="w-4 h-4" />
                                         </div>
                                     </button>
                                 ) : (
-                                    <div className="p-3 bg-gray-700/50 rounded-lg">
-                                        <p className="text-gray-500 text-sm">Última lección del curso</p>
+                                    <div className="p-3 bg-gray-700/50 rounded-lg text-center text-sm text-gray-500">
+                                        Última lección
                                     </div>
                                 )}
                             </div>
+                        </div>
+
+                        {/* Información del curso */}
+                        <div className="bg-gray-800 rounded-lg p-6">
+                            <h3 className="font-semibold mb-3">Curso</h3>
+                            <Link
+                                href={`${ROUTES.STUDENT.COURSES}/${courseId}`}
+                                className="block hover:opacity-80 transition-opacity"
+                            >
+                                <p className="text-sm text-blue-400 hover:text-blue-300">
+                                    {course.title}
+                                </p>
+                            </Link>
                         </div>
                     </div>
                 </div>
