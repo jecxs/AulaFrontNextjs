@@ -1,9 +1,18 @@
 // src/lib/api/courses.ts -
 import { apiClient } from './client';
-import { Course, Module, Lesson, CourseProgress } from '@/types/course';
+import {Course, Module, Lesson, CourseProgress, CoursesResponse, QueryCoursesDto} from '@/types/course';
 import { MyEnrollmentsResponse } from '@/types/enrollment';
 
+
+
 export const coursesApi = {
+
+    // Obtener todos los cursos (con filtros) - Para Admin
+    getAll: async (query?: QueryCoursesDto): Promise<CoursesResponse> => {
+        return apiClient.get<CoursesResponse>('/courses', { params: query });
+    },
+
+
     // Obtener mis cursos enrollados
     getMyEnrollments: async (): Promise<MyEnrollmentsResponse> => {
         return apiClient.get('/enrollments/my-courses');

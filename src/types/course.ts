@@ -197,3 +197,26 @@ export enum NotificationType {
     QUIZ_RESULT = 'QUIZ_RESULT',
     MODULE_COMPLETED = 'MODULE_COMPLETED'
 }
+
+
+//Para admin
+export interface QueryCoursesDto {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+    level?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+    categoryId?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+}
+
+export interface CoursesResponse {
+    data: Course[];
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
+}
