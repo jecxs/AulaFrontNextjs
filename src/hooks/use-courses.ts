@@ -25,7 +25,7 @@ import {
     ReorderLessonsDto,
     Resource,
     CreateResourceDto,
-    UpdateResourceDto,
+    UpdateResourceDto, QueryCoursesDto,
 } from '@/types/course';
 
 export function useCourses() {
@@ -47,18 +47,7 @@ export function useCourses() {
         }
     };
 
-    const getCourses = async (params?: {
-        page?: number;
-        limit?: number;
-        search?: string;
-        status?: string;
-        level?: string;
-        categoryId?: string;
-        instructorId?: string;
-        visibility?: string;
-        sortBy?: string;
-        sortOrder?: 'asc' | 'desc';
-    }): Promise<CourseListResponse> => {
+    const getCourses = async (params?: QueryCoursesDto): Promise<CourseListResponse> => {
         setIsLoading(true);
         setError(null);
         try {
