@@ -1,4 +1,28 @@
 // src/types/course.ts
+export enum CourseLevel {
+    BEGINNER = 'BEGINNER',
+    INTERMEDIATE = 'INTERMEDIATE',
+    ADVANCED = 'ADVANCED',
+}
+
+export enum CourseStatus {
+    DRAFT = 'DRAFT',
+    PUBLISHED = 'PUBLISHED',
+    ARCHIVED = 'ARCHIVED',
+}
+
+export enum CourseVisibility {
+    PUBLIC = 'PUBLIC',
+    PRIVATE = 'PRIVATE',
+}
+
+export enum LessonType {
+    VIDEO = 'VIDEO',
+    TEXT = 'TEXT',
+    SCORM = 'SCORM',
+}
+
+// ========== COURSE ==========
 export interface Course {
     id: string;
     title: string;
@@ -13,23 +37,84 @@ export interface Course {
     visibility: CourseVisibility;
     createdAt: string;
     publishedAt?: string;
-    category: {
+    categoryId: string;
+    instructorId: string;
+    category?: {
         id: string;
         name: string;
         slug: string;
     };
-    instructor: {
+    instructor?: {
         id: string;
         firstName: string;
         lastName: string;
         bio?: string;
     };
+    modules?: Module[];
     _count?: {
         modules: number;
         enrollments: number;
     };
 }
 
+export interface CreateCourseDto {
+    title: string;
+    slug: string;
+    summary?: string;
+    description?: string;
+    level: CourseLevel;
+    thumbnailUrl?: string;
+    estimatedHours?: number;
+    price?: number;
+    status?: CourseStatus;
+    visibility?: CourseVisibility;
+    categoryId: string;
+    instructorId: string;
+}
+
+export interface UpdateCourseDto {
+    title?: string;
+    slug?: string;
+    summary?: string;
+    description?: string;
+    level?: CourseLevel;
+    thumbnailUrl?: string;
+    estimatedHours?: number;
+    price?: number;
+    status?: CourseStatus;
+    visibility?: CourseVisibility;
+    categoryId?: string;
+    instructorId?: string;
+}
+
+export interface CourseListResponse {
+    data: Course[];
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
+}
+
+export interface CourseStats {
+    total: number;
+    byStatus: {
+        draft: number;
+        published: number;
+        archived: number;
+    };
+    byLevel: {
+        beginner: number;
+        intermediate: number;
+        advanced: number;
+    };
+    recent: {
+        last30Days: number;
+    };
+}
+
+// ========== MODULE ==========
 export interface Module {
     id: string;
     title: string;
@@ -37,14 +122,42 @@ export interface Module {
     order: number;
     isRequired: boolean;
     courseId: string;
-    lessons: Lesson[];
-    quizzes: Quiz[];
-    _count: {
+    course?: {
+        id: string;
+        title: string;
+        status: string;
+    };
+    lessons?: Lesson[];
+    quizzes?: any[];
+    _count?: {
         lessons: number;
         quizzes: number;
     };
 }
 
+export interface CreateModuleDto {
+    title: string;
+    description?: string;
+    order: number;
+    isRequired?: boolean;
+    courseId: string;
+}
+
+export interface UpdateModuleDto {
+    title?: string;
+    description?: string;
+    order?: number;
+    isRequired?: boolean;
+}
+
+export interface ReorderModulesDto {
+    modules: Array<{
+        id: string;
+        order: number;
+    }>;
+}
+
+// ========== LESSON ==========
 export interface Lesson {
     id: string;
     title: string;
@@ -54,10 +167,18 @@ export interface Lesson {
     videoUrl?: string;
     markdownContent?: string;
     moduleId: string;
-    resources: Resource[];
-    isCompleted?: boolean;
-    completedAt?: string;
-    score?: number;
+    module?: {
+        id: string;
+        title: string;
+        course?: {
+            id: string;
+            title: string;
+        };
+    };
+    resources?: Resource[];
+    _count?: {
+        resources: number;
+    };
 }
 
 export interface Resource {
@@ -69,150 +190,191 @@ export interface Resource {
     lessonId: string;
 }
 
-export interface Quiz {
-    id: string;
-    title: string;
-    passingScore: number;
-    attemptsAllowed: number;
-    moduleId: string;
-    questions: Question[];
-}
-
-export interface Question {
-    id: string;
-    text: string;
-    type: QuestionType;
-    order: number;
-    weight: number;
-    quizId: string;
-    answerOptions: AnswerOption[];
-}
-
-export interface AnswerOption {
-    id: string;
-    text: string;
-    isCorrect: boolean;
-    questionId: string;
-}
-
-export interface Enrollment {
-    id: string;
-    status: EnrollmentStatus;
-    paymentConfirmed: boolean;
-    enrolledAt: string;
-    expiresAt?: string;
-    userId: string;
-    courseId: string;
-    course: Course;
-}
-
-export interface Progress {
-    id: string;
-    isCompleted: boolean;
-    completedAt?: string;
-    score?: number;
-    enrollmentId: string;
-    lessonId: string;
-    lesson: Lesson;
-}
-
-export interface CourseProgress {
-    courseId: string;
-    courseTitle: string;
-    totalLessons: number;
-    completedLessons: number;
-    completionPercentage: number;
-    lastActivity?: string;
-    modules: ModuleProgress[];
-}
-
-export interface ModuleProgress {
-    moduleId: string;
-    moduleTitle: string;
-    totalLessons: number;
-    completedLessons: number;
-    completionPercentage: number;
-    lessons: LessonProgress[];
-}
-
-export interface LessonProgress {
-    lessonId: string;
+export interface CreateLessonDto {
     title: string;
     type: LessonType;
     order: number;
-    isCompleted: boolean;
-    completedAt?: string;
-    score?: number;
+    durationSec?: number;
+    videoUrl?: string;
+    markdownContent?: string;
+    moduleId: string;
 }
 
-export interface Notification {
-    id: string;
+export interface UpdateLessonDto {
+    title?: string;
+    type?: LessonType;
+    order?: number;
+    durationSec?: number;
+    videoUrl?: string;
+    markdownContent?: string;
+}
+
+export interface ReorderLessonsDto {
+    lessons: Array<{
+        id: string;
+        order: number;
+    }>;
+}
+
+export interface CreateResourceDto {
+    fileName: string;
+    fileType: string;
+    fileUrl: string;
+    sizeKb?: number;
+    lessonId: string;
+}
+
+export interface UpdateResourceDto {
+    fileName?: string;
+    fileType?: string;
+    fileUrl?: string;
+    sizeKb?: number;
+}
+
+// ========== PROGRESS (para contexto) ==========
+export interface CourseProgress {
+    course: Course;
+    modules: Array<{
+        module: Module;
+        lessons: Array<{
+            lesson: Lesson;
+            isCompleted: boolean;
+            completedAt?: string;
+            score?: number;
+        }>;
+        completedLessons: number;
+        totalLessons: number;
+        percentage: number;
+    }>;
+    totalLessons: number;
+    completedLessons: number;
+    completionPercentage: number;
+    nextLesson?: Lesson;
+}
+
+// Crear Curso
+export interface CreateCourseDto {
     title: string;
-    content: string;
-    type: NotificationType;
-    isRead: boolean;
-    createdAt: string;
-    userId: string;
+    slug: string;
+    summary?: string;
+    description?: string;
+    level: CourseLevel;
+    thumbnailUrl?: string;
+    estimatedHours?: number;
+    price?: number;
+    status?: CourseStatus;
+    visibility?: CourseVisibility;
+    categoryId: string;
+    instructorId: string;
 }
 
-// Enums
-export enum CourseLevel {
-    BEGINNER = 'BEGINNER',
-    INTERMEDIATE = 'INTERMEDIATE',
-    ADVANCED = 'ADVANCED'
-}
-
-export enum CourseStatus {
-    DRAFT = 'DRAFT',
-    PUBLISHED = 'PUBLISHED',
-    ARCHIVED = 'ARCHIVED'
-}
-
-export enum CourseVisibility {
-    PUBLIC = 'PUBLIC',
-    PRIVATE = 'PRIVATE'
-}
-
-export enum LessonType {
-    VIDEO = 'VIDEO',
-    TEXT = 'TEXT'
-}
-
-export enum QuestionType {
-    SINGLE = 'SINGLE',
-    MULTIPLE = 'MULTIPLE'
-}
-
-export enum EnrollmentStatus {
-    ACTIVE = 'ACTIVE',
-    COMPLETED = 'COMPLETED',
-    EXPIRED = 'EXPIRED',
-    CANCELLED = 'CANCELLED'
-}
-
-export enum NotificationType {
-    GENERAL = 'GENERAL',
-    COURSE_UPDATE = 'COURSE_UPDATE',
-    ASSIGNMENT_DUE = 'ASSIGNMENT_DUE',
-    QUIZ_RESULT = 'QUIZ_RESULT',
-    MODULE_COMPLETED = 'MODULE_COMPLETED'
-}
-
-
-//Para admin
-export interface QueryCoursesDto {
-    page?: number;
-    limit?: number;
-    search?: string;
-    status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
-    level?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+// Actualizar Curso
+export interface UpdateCourseDto {
+    title?: string;
+    slug?: string;
+    summary?: string;
+    description?: string;
+    level?: CourseLevel;
+    thumbnailUrl?: string;
+    estimatedHours?: number;
+    price?: number;
+    status?: CourseStatus;
+    visibility?: CourseVisibility;
     categoryId?: string;
-    sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
+    instructorId?: string;
 }
 
-export interface CoursesResponse {
-    data: Course[];
+// Estadísticas de Cursos
+export interface CourseStats {
+    total: number;
+    byStatus: {
+        draft: number;
+        published: number;
+        archived: number;
+    };
+    byLevel: {
+        beginner: number;
+        intermediate: number;
+        advanced: number;
+    };
+    recent: {
+        last30Days: number;
+    };
+}
+
+// ========== DTOs PARA MÓDULOS ==========
+
+export interface CreateModuleDto {
+    title: string;
+    description?: string;
+    order: number;
+    isRequired?: boolean;
+    courseId: string;
+}
+
+export interface UpdateModuleDto {
+    title?: string;
+    description?: string;
+    order?: number;
+    isRequired?: boolean;
+}
+
+export interface ReorderModulesDto {
+    modules: Array<{
+        id: string;
+        order: number;
+    }>;
+}
+
+// ========== DTOs PARA LECCIONES ==========
+
+export interface CreateLessonDto {
+    title: string;
+    type: LessonType;
+    order: number;
+    durationSec?: number;
+    videoUrl?: string;
+    markdownContent?: string;
+    moduleId: string;
+}
+
+export interface UpdateLessonDto {
+    title?: string;
+    type?: LessonType;
+    order?: number;
+    durationSec?: number;
+    videoUrl?: string;
+    markdownContent?: string;
+}
+
+export interface ReorderLessonsDto {
+    lessons: Array<{
+        id: string;
+        order: number;
+    }>;
+}
+
+// ========== DTOs PARA RECURSOS ==========
+
+export interface CreateResourceDto {
+    fileName: string;
+    fileType: string;
+    fileUrl: string;
+    sizeKb?: number;
+    lessonId: string;
+}
+
+export interface UpdateResourceDto {
+    fileName?: string;
+    fileType?: string;
+    fileUrl?: string;
+    sizeKb?: number;
+}
+
+// ========== RESPUESTAS CON PAGINACIÓN ==========
+
+export interface ModulesResponse {
+    data: Module[];
     pagination: {
         page: number;
         limit: number;
@@ -220,3 +382,17 @@ export interface CoursesResponse {
         totalPages: number;
     };
 }
+
+export interface LessonsResponse {
+    data: Lesson[];
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
+}
+
+
+
+
