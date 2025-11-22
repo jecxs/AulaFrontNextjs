@@ -171,7 +171,7 @@ export default function AdminCoursesPage() {
     if (isLoading && courses.length === 0) {
         return (
             <div className="flex items-center justify-center h-64">
-                <LoadingSpinner size="large" />
+                <LoadingSpinner size="sm" />
             </div>
         );
     }

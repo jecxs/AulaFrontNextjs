@@ -3,7 +3,6 @@ import { apiClient } from './client';
 import {
     Instructor,
     InstructorWithCourses,
-    InstructorList,
     CreateInstructorDto,
     UpdateInstructorDto,
     QueryInstructorsDto,
@@ -24,14 +23,14 @@ export const instructorsApi = {
      * Este es el método que necesitas para el modal de crear curso
      */
     getAll: async (query?: QueryInstructorsDto): Promise<InstructorsResponse> => {
-        return apiClient.get<InstructorsResponse>('/instructors', query);
+        return apiClient.get<InstructorsResponse>('/instructors', { params: query });
     },
 
     /**
      * GET /instructors/public - Lista básica de instructores (sin autenticación)
      */
     getPublic: async (query?: QueryInstructorsDto): Promise<InstructorsResponse> => {
-        return apiClient.get<InstructorsResponse>('/instructors/public', query);
+        return apiClient.get<InstructorsResponse>('/instructors/public', { params: query });
     },
 
     /**
@@ -54,7 +53,7 @@ export const instructorsApi = {
     getTop: async (limit?: number): Promise<InstructorWithCourses[]> => {
         return apiClient.get<InstructorWithCourses[]>(
             '/instructors/top',
-            limit ? { limit } : undefined
+            limit ? { params: { limit } } : undefined
         );
     },
 

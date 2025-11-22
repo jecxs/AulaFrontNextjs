@@ -1,4 +1,4 @@
-// src/lib/api/courses.ts - VERSIÓN EXTENDIDA
+// src/lib/api/courses.ts
 import { apiClient } from './client';
 import {
     Course,
@@ -6,7 +6,7 @@ import {
     Lesson,
     Resource,
     CourseProgress,
-    CoursesResponse,
+    CourseListResponse, // Cambiar a CourseListResponse si no existe
     ModulesResponse,
     LessonsResponse,
     QueryCoursesDto,
@@ -31,8 +31,8 @@ export const coursesApi = {
     // ==========================================
 
     // Obtener todos los cursos (con filtros) - Para Admin
-    getAll: async (query?: QueryCoursesDto): Promise<CoursesResponse> => {
-        return apiClient.get<CoursesResponse>('/courses', query);
+    getAll: async (query?: QueryCoursesDto): Promise<CourseListResponse> => {
+        return apiClient.get<CourseListResponse>('/courses', { params: query });
     },
 
     // Obtener mis cursos enrollados
@@ -112,10 +112,10 @@ export const coursesApi = {
             limit?: number;
             status?: string;
         }
-    ): Promise<CoursesResponse> => {
-        return apiClient.get<CoursesResponse>(
+    ): Promise<CourseListResponse> => {
+        return apiClient.get<CourseListResponse>(
             `/courses/instructor/${instructorId}`,
-            params
+            { params }
         );
     },
 
@@ -126,10 +126,10 @@ export const coursesApi = {
             page?: number;
             limit?: number;
         }
-    ): Promise<CoursesResponse> => {
-        return apiClient.get<CoursesResponse>(
+    ): Promise<CourseListResponse> => {
+        return apiClient.get<CourseListResponse>(
             `/courses/category/${categoryId}`,
-            params
+            { params }
         );
     },
 };
@@ -151,7 +151,7 @@ export const modulesApi = {
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
     }): Promise<ModulesResponse> => {
-        return apiClient.get('/modules', params);
+        return apiClient.get('/modules', { params });
     },
 
     // Obtener módulos de un curso (reutilizando coursesApi)
@@ -210,7 +210,7 @@ export const lessonsApi = {
         sortBy?: string;
         sortOrder?: 'asc' | 'desc';
     }): Promise<LessonsResponse> => {
-        return apiClient.get('/lessons', params);
+        return apiClient.get('/lessons', { params });
     },
 
     // Obtener lecciones de un módulo (reutilizando coursesApi)

@@ -3,7 +3,6 @@ import { apiClient } from './client';
 import {
     CourseCategory,
     CourseCategoryWithCourses,
-    CourseCategoryList,
     CreateCourseCategoryDto,
     UpdateCourseCategoryDto,
     QueryCourseCategoriesDto,
@@ -24,7 +23,7 @@ export const courseCategoriesApi = {
      * Admin ve todas, usuarios solo activas
      */
     getAll: async (query?: QueryCourseCategoriesDto): Promise<CourseCategoriesResponse> => {
-        return apiClient.get<CourseCategoriesResponse>('/course-categories', query);
+        return apiClient.get<CourseCategoriesResponse>('/course-categories', { params: query });
     },
 
     /**
@@ -41,7 +40,7 @@ export const courseCategoriesApi = {
     getPopular: async (limit?: number): Promise<CourseCategoryWithCourses[]> => {
         return apiClient.get<CourseCategoryWithCourses[]>(
             '/course-categories/popular',
-            limit ? { limit } : undefined
+            limit ? { params: { limit } } : undefined
         );
     },
 

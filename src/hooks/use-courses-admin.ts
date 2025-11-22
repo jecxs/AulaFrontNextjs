@@ -13,7 +13,7 @@ import {
     Course,
     CreateCourseDto,
     UpdateCourseDto,
-    CoursesResponse,
+    CourseListResponse, // O CourseListResponse según tu types/course.ts
     CourseStats,
     Module,
     CreateModuleDto,
@@ -52,7 +52,7 @@ export function useCoursesAdmin() {
         }
     };
 
-    const getCourses = async (params?: QueryCoursesDto): Promise<CoursesResponse> => {
+    const getCourses = async (params?: QueryCoursesDto): Promise<CourseListResponse> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -70,6 +70,7 @@ export function useCoursesAdmin() {
         setIsLoading(true);
         setError(null);
         try {
+            // Usar getCourse en lugar de getById
             return await coursesApi.getCourse(id);
         } catch (err: unknown) {
             const errorMessage = getErrorMessage(err, 'Error al cargar curso');

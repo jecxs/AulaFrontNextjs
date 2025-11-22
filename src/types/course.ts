@@ -394,5 +394,15 @@ export interface LessonsResponse {
 }
 
 
-
-
+export interface QueryCoursesDto {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+    level?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+    categoryId?: string;
+    instructorId?: string;
+    visibility?: 'PUBLIC' | 'PRIVATE';
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+}

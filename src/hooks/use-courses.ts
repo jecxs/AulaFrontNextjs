@@ -76,7 +76,7 @@ export function useCourses() {
         setIsLoading(true);
         setError(null);
         try {
-            return await coursesApi.getById(id);
+            return await coursesApi.getCourse(id);
         } catch (err: unknown) {
             const errorMessage = getErrorMessage(err, 'Error al cargar curso');
             setError(errorMessage);
