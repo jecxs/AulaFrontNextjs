@@ -15,6 +15,11 @@ import {
     CreateAnswerOptionDto,
     CreateAnswerOptionSimpleDto,
     UpdateAnswerOptionDto,
+    QuizForStudent,
+    QuizPreview,
+    SubmitQuizDto,
+    QuizSubmissionResult,
+    QuizResults,
 } from '@/types/quiz';
 
 // ========== QUIZZES API ==========
@@ -35,13 +40,23 @@ export const quizzesApi = {
     },
 
     // Obtener quizzes de un módulo específico
-    getByModule: async (moduleId: string): Promise<Quiz[]> => {
+    getByModule: async (moduleId: string): Promise<QuizForStudent[]> => {
         return apiClient.get(`/quizzes/module/${moduleId}`);
     },
 
     // Obtener preview del quiz para estudiantes
-    getPreview: async (id: string): Promise<Quiz> => {
+    getPreview: async (id: string): Promise<QuizPreview> => {
         return apiClient.get(`/quizzes/${id}/preview`);
+    },
+
+    // Enviar respuestas de quiz (ESTUDIANTE)
+    submitQuiz: async (quizId: string, data: SubmitQuizDto): Promise<QuizSubmissionResult> => {
+        return apiClient.post(`/quizzes/${quizId}/submit`, data);
+    },
+
+    // Obtener resultados de un quiz (ESTUDIANTE)
+    getResults: async (quizId: string, userId: string): Promise<QuizResults> => {
+        return apiClient.get(`/quizzes/${quizId}/results/${userId}`);
     },
 
     // Actualizar quiz (Solo ADMIN)

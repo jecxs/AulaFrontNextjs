@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { coursesApi } from '@/lib/api/courses';
 import { progressApi } from '@/lib/api/progress';
+import { quizzesApi } from '@/lib/api/quizzes';
 import {
     BookOpen,
     Clock,
@@ -22,6 +23,7 @@ import Link from 'next/link';
 import { ROUTES } from '@/lib/utils/constants';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { toast } from 'react-hot-toast';
+import QuizCard from '@/components/student/QuizCard';
 
 interface CourseData {
     course: any;
@@ -94,20 +96,30 @@ export default function CourseDetailPage() {
                 });
             }
 
-            // Cargar lecciones para cada módulo y marcar como completadas
+            // Cargar lecciones y quizzes para cada módulo
             const modulesWithLessons = await Promise.all(
                 modules.map(async (module: any) => {
                     try {
-                        const lessons = await coursesApi.getModuleLessons(module.id);
+                        // Cargar lecciones y quizzes en paralelo
+                        const [lessons, quizzes] = await Promise.all([
+                            coursesApi.getModuleLessons(module.id),
+                            quizzesApi.getByModule(module.id).catch(() => [])
+                        ]);
+
                         // Marcar lecciones como completadas basándose en el progreso
                         const lessonsWithProgress = lessons.map((lesson: any) => ({
                             ...lesson,
                             isCompleted: completedLessonIds.has(lesson.id)
                         }));
-                        return { ...module, lessons: lessonsWithProgress };
+
+                        return {
+                            ...module,
+                            lessons: lessonsWithProgress,
+                            quizzes: quizzes || []
+                        };
                     } catch (error) {
                         console.error(`Error loading lessons for module ${module.id}:`, error);
-                        return { ...module, lessons: [] };
+                        return { ...module, lessons: [], quizzes: [] };
                     }
                 })
             );
@@ -189,6 +201,11 @@ export default function CourseDetailPage() {
 
         const completedLessons = module.lessons.filter((lesson: any) => lesson.isCompleted).length;
         return Math.round((completedLessons / module.lessons.length) * 100);
+    };
+
+    const isModuleCompleted = (module: any) => {
+        if (!module.lessons.length) return false;
+        return module.lessons.every((lesson: any) => lesson.isCompleted);
     };
 
     if (isLoading) {
@@ -336,6 +353,9 @@ export default function CourseDetailPage() {
                     <h2 className="text-xl font-bold text-gray-900">Contenido del curso</h2>
                     <p className="text-gray-600 mt-1">
                         {modules.length} módulos • {modules.reduce((acc, module) => acc + module.lessons.length, 0)} lecciones
+                        {modules.reduce((acc, module) => acc + (module.quizzes?.length || 0), 0) > 0 && (
+                            <> • {modules.reduce((acc, module) => acc + (module.quizzes?.length || 0), 0)} evaluaciones</>
+                        )}
                     </p>
                 </div>
 
@@ -372,6 +392,9 @@ export default function CourseDetailPage() {
                                             </h3>
                                             <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
                                                 <span>{module.lessons.length} lecciones</span>
+                                                {module.quizzes && module.quizzes.length > 0 && (
+                                                    <span>{module.quizzes.length} {module.quizzes.length === 1 ? 'evaluación' : 'evaluaciones'}</span>
+                                                )}
                                                 <span>{moduleProgress}% completado</span>
                                             </div>
                                         </div>
@@ -382,9 +405,10 @@ export default function CourseDetailPage() {
                                     }`} />
                                 </button>
 
-                                {/* Lecciones del módulo */}
+                                {/* Lecciones y Quizzes del módulo */}
                                 {isExpanded && (
                                     <div className="mt-4 ml-12 space-y-2">
+                                        {/* Lecciones */}
                                         {module.lessons.map((lesson: any, lessonIndex: number) => (
                                             <Link
                                                 key={lesson.id}
@@ -409,6 +433,23 @@ export default function CourseDetailPage() {
                                                 <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
                                             </Link>
                                         ))}
+
+                                        {/* Quizzes */}
+                                        {module.quizzes && module.quizzes.length > 0 && (
+                                            <div className="pt-2">
+                                                <div className="mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                    Evaluaciones
+                                                </div>
+                                                {module.quizzes.map((quiz: any) => (
+                                                    <QuizCard
+                                                        key={quiz.id}
+                                                        quiz={quiz}
+                                                        courseId={courseId}
+                                                        isModuleCompleted={isModuleCompleted(module)}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>

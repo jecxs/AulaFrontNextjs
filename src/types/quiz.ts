@@ -181,3 +181,113 @@ export interface QuestionStats {
         essay: number;
     };
 }
+
+// ========== STUDENT TYPES ==========
+// Para estudiantes (sin información sensible)
+export interface QuizForStudent {
+    id: string;
+    title: string;
+    description?: string;
+    moduleId: string;
+    passingScore: number;
+    timeLimit?: number;
+    attemptsAllowed: number;
+    isRequired: boolean;
+    order: number;
+    questionsCount: number;
+    totalPoints: number;
+}
+
+export interface AnswerOptionForStudent {
+    id: string;
+    text: string;
+    // isCorrect omitido para estudiantes
+}
+
+export interface QuestionForStudent {
+    id: string;
+    text: string;
+    type: string;
+    order: number;
+    weight: number;
+    imageUrl?: string;
+    answerOptions: AnswerOptionForStudent[];
+}
+
+export interface QuizPreview {
+    id: string;
+    title: string;
+    description?: string;
+    passingScore: number;
+    timeLimit?: number;
+    attemptsAllowed: number;
+    questionsCount: number;
+    totalPoints: number;
+    questions: QuestionForStudent[];
+}
+
+// ========== QUIZ SUBMISSION ==========
+export interface QuizAnswer {
+    questionId: string;
+    answerOptionIds?: string[]; // Para MULTIPLE_CHOICE, TRUE_FALSE
+    textAnswer?: string; // Para SHORT_ANSWER, ESSAY
+}
+
+export interface SubmitQuizDto {
+    quizId: string;
+    answers: QuizAnswer[];
+}
+
+export interface QuizSubmissionResult {
+    id: string;
+    quizId: string;
+    userId: string;
+    score: number;
+    passed: boolean;
+    submittedAt: string;
+    answers: {
+        questionId: string;
+        questionText: string;
+        questionWeight: number;
+        answerOptionIds?: string[];
+        textAnswer?: string;
+        isCorrect: boolean;
+        pointsEarned: number;
+    }[];
+}
+
+// ========== QUIZ RESULTS ==========
+export interface QuizAttempt {
+    id: string;
+    quizId: string;
+    userId: string;
+    score: number;
+    passed: boolean;
+    submittedAt: string;
+}
+
+export interface QuizResults {
+    quiz: QuizForStudent;
+    attempts: QuizAttempt[];
+    attemptsUsed: number;
+    attemptsRemaining: number;
+    canRetake: boolean;
+    bestScore?: number;
+    lastAttempt?: QuizAttempt;
+}
+
+// ========== MODULE WITH QUIZZES ==========
+export interface ModuleWithQuizzes {
+    id: string;
+    title: string;
+    description?: string;
+    order: number;
+    isRequired: boolean;
+    courseId: string;
+    lessons: any[];
+    quizzes: QuizForStudent[];
+    _count?: {
+        lessons: number;
+        quizzes: number;
+    };
+}
