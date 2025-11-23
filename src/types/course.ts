@@ -22,6 +22,25 @@ export enum LessonType {
     SCORM = 'SCORM',
 }
 
+export enum EnrollmentStatus {
+    ACTIVE = 'ACTIVE',
+    SUSPENDED = 'SUSPENDED',
+    COMPLETED = 'COMPLETED',
+    EXPIRED = 'EXPIRED',
+}
+
+// ========== ENROLLMENT ==========
+export interface Enrollment {
+    id: string;
+    userId: string;
+    courseId: string;
+    enrolledById: string;
+    status: EnrollmentStatus;
+    paymentConfirmed: boolean;
+    enrolledAt: string;
+    expiresAt?: string;
+}
+
 // ========== COURSE ==========
 export interface Course {
     id: string;
