@@ -52,6 +52,8 @@ export default function LessonPlayerPage() {
 
     useEffect(() => {
         if (courseId && lessonId) {
+            setLessonData(null);
+            setIsLoading(true);
             loadLessonData();
         }
     }, [courseId, lessonId]);
