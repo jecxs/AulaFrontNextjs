@@ -232,7 +232,43 @@ export interface UpdateResourceDto {
 }
 
 // ========== PROGRESS (para contexto) ==========
+// Estructura real que devuelve el backend en /progress/my-course/:courseId
 export interface CourseProgress {
+    courseId: string;
+    userId: string;
+    enrollment: {
+        id: string;
+        enrolledAt: string;
+        expiresAt?: string;
+        status: string;
+    };
+    overall: {
+        totalLessons: number;
+        completedLessons: number;
+        completionPercentage: number;
+        averageScore?: number;
+    };
+    modules: Array<{
+        moduleId: string;
+        title: string;
+        order: number;
+        totalLessons: number;
+        completedLessons: number;
+        completionPercentage: number;
+        lessons: Array<{
+            lessonId: string;  // Backend usa "lessonId", no "lesson.id"
+            title: string;
+            type: LessonType;
+            order: number;
+            isCompleted: boolean;
+            completedAt?: string;
+            score?: number;
+        }>;
+    }>;
+}
+
+// Estructura legacy (mantener para compatibilidad con código antiguo)
+export interface CourseProgressLegacy {
     course: Course;
     modules: Array<{
         module: Module;

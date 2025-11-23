@@ -83,13 +83,8 @@ export default function CourseDetailPage() {
                     if (moduleProgress.lessons) {
                         moduleProgress.lessons.forEach((lessonProgress: any) => {
                             if (lessonProgress.isCompleted) {
-                                // Manejar ambas estructuras posibles del backend:
-                                // 1. { lesson: { id: ... }, isCompleted: true } (estructura esperada según tipos)
-                                // 2. { id: ..., isCompleted: true } o { lessonId: ..., isCompleted: true } (estructura alternativa)
-                                const lessonId = lessonProgress.lesson?.id
-                                    || lessonProgress.lessonId
-                                    || lessonProgress.id;
-
+                                // Backend devuelve "lessonId" directamente, no "lesson.id"
+                                const lessonId = lessonProgress.lessonId;
                                 if (lessonId) {
                                     completedLessonIds.add(lessonId);
                                 }
@@ -292,24 +287,24 @@ export default function CourseDetailPage() {
 
                         {/* Progreso y acción */}
                         <div className="lg:w-80">
-                            {progress && (
+                            {progress && progress.overall && (
                                 <div className="bg-gray-50 rounded-lg p-4 mb-4">
                                     <div className="flex items-center justify-between mb-2">
                                         <span className="text-sm font-medium text-gray-700">
                                             Progreso del curso
                                         </span>
                                         <span className="text-sm font-bold text-gray-900">
-                                            {progress.completionPercentage}%
+                                            {progress.overall.completionPercentage}%
                                         </span>
                                     </div>
                                     <div className="w-full bg-gray-200 rounded-full h-2">
                                         <div
                                             className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                            style={{ width: `${progress.completionPercentage}%` }}
+                                            style={{ width: `${progress.overall.completionPercentage}%` }}
                                         />
                                     </div>
                                     <div className="mt-2 text-xs text-gray-600">
-                                        {progress.completedLessons} de {progress.totalLessons} lecciones completadas
+                                        {progress.overall.completedLessons} de {progress.overall.totalLessons} lecciones completadas
                                     </div>
                                 </div>
                             )}
@@ -319,7 +314,7 @@ export default function CourseDetailPage() {
                                     href={`${ROUTES.STUDENT.COURSES}/${courseId}/lessons/${nextLesson.lesson.id}`}
                                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center group"
                                 >
-                                    {progress?.completedLessons > 0 ? 'Continuar curso' : 'Comenzar curso'}
+                                    {progress?.overall?.completedLessons && progress.overall.completedLessons > 0 ? 'Continuar curso' : 'Comenzar curso'}
                                     <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                                 </Link>
                             ) : (
