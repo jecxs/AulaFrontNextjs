@@ -331,13 +331,14 @@ export default function AdminEnrollmentsPage() {
                                                             <div
                                                                 className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                                                                 style={{
-                                                                    width: `${enrollment.progress?.completionPercentage || 0}%`,
+                                                                    width: `${Math.max(0, Math.min(100, enrollment.progress?.completionPercentage || 0))}%`,
                                                                 }}
                                                             />
                                                         </div>
                                                         <p className="text-xs text-gray-500 mt-1">
-                                                            {(enrollment.progress?.completionPercentage || 0).toFixed(1)}%
-                                                            completado
+                                                            {enrollment.progress 
+                                                                ? `${Math.max(0, Math.min(100, enrollment.progress.completionPercentage)).toFixed(1)}% completado`
+                                                                : '0% completado'}
                                                         </p>
                                                     </div>
 

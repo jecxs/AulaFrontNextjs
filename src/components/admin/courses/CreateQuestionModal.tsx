@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, AlertCircle, Loader2, Plus } from 'lucide-react';
+import { X, AlertCircle, Loader2, Plus, Image as ImageIcon, Upload, XCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { cn } from '@/lib/utils/cn';
 import { useQuizzesAdmin } from '@/hooks/use-quizzes-admin';
 import { CreateQuestionSimpleDto, QuestionType, AnswerOption } from '@/types/quiz';
+import { questionsApi } from '@/lib/api/quizzes';
 
 interface Props {
     isOpen: boolean;
@@ -29,6 +30,11 @@ export default function CreateQuestionModal({ isOpen, onClose, quizId, onSuccess
     >([{ optionText: '', isCorrect: false }]);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [loadingOrder, setLoadingOrder] = useState(false);
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imageUrl, setImageUrl] = useState<string>('');
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const [useImageUrl, setUseImageUrl] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
@@ -71,17 +77,52 @@ export default function CreateQuestionModal({ isOpen, onClose, quizId, onSuccess
         if (!validate()) return;
 
         try {
-            const question = await createQuestionSimple(form);
+            let question;
 
-            // Crear opciones de respuesta si aplica
-            if (form.type === 'MULTIPLE' || form.type === 'TRUEFALSE') {
-                const filledOptions = answerOptions.filter((o) => o.optionText.trim());
-                for (let i = 0; i < filledOptions.length; i++) {
-                    await createAnswerOption({
-                        questionId: question.id,
-                        text: filledOptions[i].optionText,
-                        isCorrect: filledOptions[i].isCorrect,
-                    });
+            // Si hay un archivo de imagen, usar createWithImage
+            if (imageFile) {
+                setUploadingImage(true);
+                const formData = new FormData();
+                formData.append('text', form.text);
+                formData.append('type', form.type);
+                formData.append('order', form.order.toString());
+                formData.append('weight', (form.weight || 1).toString());
+                formData.append('quizId', quizId);
+                formData.append('image', imageFile);
+
+                // Si hay opciones de respuesta, agregarlas como JSON
+                if (form.type === 'MULTIPLE' || form.type === 'TRUEFALSE') {
+                    const filledOptions = answerOptions.filter((o) => o.optionText.trim());
+                    formData.append(
+                        'answerOptionsJson',
+                        JSON.stringify(
+                            filledOptions.map((o) => ({
+                                text: o.optionText,
+                                isCorrect: o.isCorrect,
+                            }))
+                        )
+                    );
+                }
+
+                question = await questionsApi.createWithImage(formData);
+            } else {
+                // Si hay URL de imagen o no hay imagen, usar createQuestionSimple
+                const questionData: CreateQuestionSimpleDto = {
+                    ...form,
+                    imageUrl: imageUrl.trim() || undefined,
+                };
+                question = await createQuestionSimple(questionData);
+
+                // Crear opciones de respuesta si aplica
+                if (form.type === 'MULTIPLE' || form.type === 'TRUEFALSE') {
+                    const filledOptions = answerOptions.filter((o) => o.optionText.trim());
+                    for (let i = 0; i < filledOptions.length; i++) {
+                        await createAnswerOption({
+                            questionId: question.id,
+                            text: filledOptions[i].optionText,
+                            isCorrect: filledOptions[i].isCorrect,
+                        });
+                    }
                 }
             }
 
@@ -113,6 +154,8 @@ export default function CreateQuestionModal({ isOpen, onClose, quizId, onSuccess
                 }
             }
             toast.error('Error al crear pregunta');
+        } finally {
+            setUploadingImage(false);
         }
     };
 
@@ -126,7 +169,54 @@ export default function CreateQuestionModal({ isOpen, onClose, quizId, onSuccess
         });
         setAnswerOptions([{ optionText: '', isCorrect: false }]);
         setErrors({});
+        setImageFile(null);
+        setImageUrl('');
+        setImagePreview(null);
+        setUseImageUrl(false);
         onClose();
+    };
+
+    const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validar que sea una imagen
+        if (!file.type.startsWith('image/')) {
+            toast.error('Por favor selecciona un archivo de imagen válido');
+            return;
+        }
+
+        // Validar tamaño (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('La imagen no debe exceder 5MB');
+            return;
+        }
+
+        setImageFile(file);
+        setUseImageUrl(false);
+        setImageUrl('');
+
+        // Crear preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const url = e.target.value;
+        setImageUrl(url);
+        setUseImageUrl(true);
+        setImageFile(null);
+        setImagePreview(url || null);
+    };
+
+    const removeImage = () => {
+        setImageFile(null);
+        setImageUrl('');
+        setImagePreview(null);
+        setUseImageUrl(false);
     };
 
     const addAnswerOption = () => {
@@ -259,6 +349,107 @@ export default function CreateQuestionModal({ isOpen, onClose, quizId, onSuccess
                                     )}
                                 </div>
 
+                                {/* Campo de imagen */}
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">
+                                        Imagen (Opcional)
+                                    </label>
+                                    
+                                    {/* Tabs para elegir entre subir archivo o URL */}
+                                    <div className="flex gap-2 mb-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setUseImageUrl(false);
+                                                if (useImageUrl) {
+                                                    setImageUrl('');
+                                                    setImagePreview(null);
+                                                }
+                                            }}
+                                            className={cn(
+                                                'px-3 py-1 text-sm rounded border',
+                                                !useImageUrl
+                                                    ? 'bg-blue-600 text-white border-blue-600'
+                                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                            )}
+                                        >
+                                            <Upload className="h-4 w-4 inline mr-1" />
+                                            Subir archivo
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setUseImageUrl(true);
+                                                if (!useImageUrl) {
+                                                    setImageFile(null);
+                                                    setImagePreview(null);
+                                                }
+                                            }}
+                                            className={cn(
+                                                'px-3 py-1 text-sm rounded border',
+                                                useImageUrl
+                                                    ? 'bg-blue-600 text-white border-blue-600'
+                                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                            )}
+                                        >
+                                            <ImageIcon className="h-4 w-4 inline mr-1" />
+                                            Usar URL
+                                        </button>
+                                    </div>
+
+                                    {!useImageUrl ? (
+                                        <div>
+                                            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                                    <Upload className="w-8 h-8 mb-2 text-gray-500" />
+                                                    <p className="mb-2 text-sm text-gray-500">
+                                                        <span className="font-semibold">Click para subir</span> o arrastra y suelta
+                                                    </p>
+                                                    <p className="text-xs text-gray-500">PNG, JPG, GIF hasta 5MB</p>
+                                                </div>
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={handleImageFileSelect}
+                                                    className="hidden"
+                                                    id="image-upload"
+                                                />
+                                            </label>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <input
+                                                type="url"
+                                                value={imageUrl}
+                                                onChange={handleImageUrlChange}
+                                                placeholder="https://ejemplo.com/imagen.jpg"
+                                                className="w-full rounded-md border border-gray-300 shadow-sm p-2"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Preview de imagen */}
+                                    {imagePreview && (
+                                        <div className="mt-3 relative">
+                                            <div className="relative inline-block">
+                                                <img
+                                                    src={imagePreview}
+                                                    alt="Preview"
+                                                    className="max-h-48 rounded-lg border border-gray-300"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={removeImage}
+                                                    className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700"
+                                                    title="Eliminar imagen"
+                                                >
+                                                    <XCircle className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
                                 {(form.type === 'MULTIPLE' ||
                                     form.type === 'TRUEFALSE') && (
                                     <div>
@@ -342,10 +533,19 @@ export default function CreateQuestionModal({ isOpen, onClose, quizId, onSuccess
                                     </button>
                                     <button
                                         type="submit"
-                                        disabled={isLoading}
+                                        disabled={isLoading || uploadingImage}
                                         className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
                                     >
-                                        {isLoading ? 'Creando...' : 'Crear Pregunta'}
+                                        {uploadingImage ? (
+                                            <>
+                                                <Loader2 className="h-4 w-4 inline animate-spin mr-2" />
+                                                Subiendo imagen...
+                                            </>
+                                        ) : isLoading ? (
+                                            'Creando...'
+                                        ) : (
+                                            'Crear Pregunta'
+                                        )}
                                     </button>
                                 </div>
                             </>

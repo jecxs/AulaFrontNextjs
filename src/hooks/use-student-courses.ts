@@ -21,11 +21,30 @@ export function useMarkLessonComplete() {
         onSuccess: (data, variables) => {
             toast.success('¡Lección completada!');
 
-            // Invalidar caché para actualizar el progreso
-            queryClient.invalidateQueries({ queryKey: ['lesson-progress', variables.lessonId] });
+            // Invalidar TODAS las queries relacionadas con progreso para asegurar actualización completa
+            // 1. Progreso de la lección específica
+            queryClient.invalidateQueries({ queryKey: ['lesson-progress'] });
+            
+            // 2. Progreso del curso (todas las variantes)
             queryClient.invalidateQueries({ queryKey: ['course-progress'] });
-            queryClient.invalidateQueries({ queryKey: ['student-courses'] });
+            queryClient.invalidateQueries({ queryKey: ['student-course-progress'] });
+            
+            // 3. Enrollments del estudiante (para dashboard y lista de cursos)
             queryClient.invalidateQueries({ queryKey: ['student-enrollments'] });
+            queryClient.invalidateQueries({ queryKey: ['student-courses'] });
+            
+            // 4. Siguiente lección
+            queryClient.invalidateQueries({ queryKey: ['next-lesson'] });
+            
+            // 5. Progreso de módulos
+            queryClient.invalidateQueries({ queryKey: ['module-progress'] });
+            
+            // 6. Resumen de progreso general
+            queryClient.invalidateQueries({ queryKey: ['my-progress'] });
+            
+            // 7. Invalidar también queries de enrollments (para que el admin vea el progreso actualizado)
+            // Esto es importante porque el admin necesita ver el progreso actualizado
+            queryClient.invalidateQueries({ queryKey: ['enrollments'] });
         },
         onError: (error) => {
             console.error('Error marking lesson complete:', error);

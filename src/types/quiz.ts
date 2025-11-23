@@ -47,12 +47,8 @@ export interface CreateQuizDto {
 
 export interface UpdateQuizDto {
     title?: string;
-    description?: string;
     passingScore?: number;
-    timeLimit?: number;
-    isRequired?: boolean;
-    status?: QuizStatus;
-    order?: number;
+    attemptsAllowed?: number;
 }
 
 // ========== QUESTION ==========
@@ -93,6 +89,7 @@ export interface CreateQuestionSimpleDto {
     type: string;
     order: number;
     weight?: number;
+    imageUrl?: string; // URL de la imagen (opcional)
 }
 
 export interface CreateQuestionWithImageDto {

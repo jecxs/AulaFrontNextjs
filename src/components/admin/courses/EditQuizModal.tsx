@@ -5,7 +5,7 @@ import { X, HelpCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { cn } from '@/lib/utils/cn';
 import { useQuizzesAdmin } from '@/hooks/use-quizzes-admin';
-import { Quiz, UpdateQuizDto, QuizStatus } from '@/types/quiz';
+import { Quiz, UpdateQuizDto } from '@/types/quiz';
 
 interface Props {
     isOpen: boolean;
@@ -23,12 +23,8 @@ export default function EditQuizModal({ isOpen, onClose, quiz, onSuccess }: Prop
         if (isOpen && quiz) {
             setForm({
                 title: quiz.title,
-                description: quiz.description,
                 passingScore: quiz.passingScore,
-                timeLimit: quiz.timeLimit,
-                isRequired: quiz.isRequired,
-                status: quiz.status,
-                order: quiz.order,
+                attemptsAllowed: (quiz as any).attemptsAllowed, // Puede no estar en el tipo pero existe en el backend
             });
         }
     }, [isOpen, quiz]);
@@ -38,12 +34,15 @@ export default function EditQuizModal({ isOpen, onClose, quiz, onSuccess }: Prop
         if (!form.title?.trim()) e.title = 'El título es requerido';
         if (
             form.passingScore !== undefined &&
-            (form.passingScore < 0 || form.passingScore > 100)
+            (form.passingScore < 1 || form.passingScore > 100)
         ) {
-            e.passingScore = 'La puntuación debe estar entre 0 y 100';
+            e.passingScore = 'La puntuación debe estar entre 1 y 100';
         }
-        if (form.timeLimit && form.timeLimit <= 0) {
-            e.timeLimit = 'El tiempo debe ser mayor a 0';
+        if (
+            form.attemptsAllowed !== undefined &&
+            (form.attemptsAllowed < 1 || form.attemptsAllowed > 10)
+        ) {
+            e.attemptsAllowed = 'Los intentos permitidos deben estar entre 1 y 10';
         }
         setErrors(e);
         return Object.keys(e).length === 0;
@@ -128,24 +127,6 @@ export default function EditQuizModal({ isOpen, onClose, quiz, onSuccess }: Prop
                                     )}
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">
-                                        Descripción
-                                    </label>
-                                    <textarea
-                                        value={form.description || ''}
-                                        onChange={(e) =>
-                                            setForm({
-                                                ...form,
-                                                description: e.target.value,
-                                            })
-                                        }
-                                        rows={3}
-                                        className="w-full rounded-md border border-gray-300 shadow-sm p-2"
-                                        placeholder="Describe el propósito del quiz..."
-                                    />
-                                </div>
-
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium mb-1">
@@ -153,19 +134,22 @@ export default function EditQuizModal({ isOpen, onClose, quiz, onSuccess }: Prop
                                         </label>
                                         <input
                                             type="number"
-                                            min="0"
+                                            min="1"
                                             max="100"
                                             value={form.passingScore ?? ''}
                                             onChange={(e) =>
                                                 setForm({
                                                     ...form,
-                                                    passingScore: parseInt(e.target.value),
+                                                    passingScore: e.target.value
+                                                        ? parseInt(e.target.value)
+                                                        : undefined,
                                                 })
                                             }
                                             className={cn(
                                                 'w-full rounded-md border border-gray-300 shadow-sm p-2',
                                                 errors.passingScore && 'border-red-300'
                                             )}
+                                            placeholder="70"
                                         />
                                         {errors.passingScore && (
                                             <p className="mt-1 text-sm text-red-600 flex items-center">
@@ -177,76 +161,37 @@ export default function EditQuizModal({ isOpen, onClose, quiz, onSuccess }: Prop
 
                                     <div>
                                         <label className="block text-sm font-medium mb-1">
-                                            Tiempo límite (minutos)
+                                            Intentos permitidos
                                         </label>
                                         <input
                                             type="number"
                                             min="1"
-                                            value={form.timeLimit ?? ''}
+                                            max="10"
+                                            value={form.attemptsAllowed ?? ''}
                                             onChange={(e) =>
                                                 setForm({
                                                     ...form,
-                                                    timeLimit: e.target.value
+                                                    attemptsAllowed: e.target.value
                                                         ? parseInt(e.target.value)
                                                         : undefined,
                                                 })
                                             }
                                             className={cn(
                                                 'w-full rounded-md border border-gray-300 shadow-sm p-2',
-                                                errors.timeLimit && 'border-red-300'
+                                                errors.attemptsAllowed && 'border-red-300'
                                             )}
-                                            placeholder="Sin límite"
+                                            placeholder="3"
                                         />
-                                        {errors.timeLimit && (
+                                        {errors.attemptsAllowed && (
                                             <p className="mt-1 text-sm text-red-600 flex items-center">
                                                 <AlertCircle className="h-4 w-4 mr-1" />
-                                                {errors.timeLimit}
+                                                {errors.attemptsAllowed}
                                             </p>
                                         )}
+                                        <p className="mt-1 text-xs text-gray-500">
+                                            Número de intentos permitidos (1-10)
+                                        </p>
                                     </div>
-                                </div>
-
-                                <div className="flex items-center space-x-2">
-                                    <input
-                                        type="checkbox"
-                                        id="isRequired"
-                                        checked={form.isRequired ?? false}
-                                        onChange={(e) =>
-                                            setForm({
-                                                ...form,
-                                                isRequired: e.target.checked,
-                                            })
-                                        }
-                                        className="rounded"
-                                    />
-                                    <label
-                                        htmlFor="isRequired"
-                                        className="text-sm font-medium cursor-pointer"
-                                    >
-                                        Este quiz es obligatorio para completar el módulo
-                                    </label>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">
-                                        Estado
-                                    </label>
-                                    <select
-                                        value={form.status || QuizStatus.DRAFT}
-                                        onChange={(e) =>
-                                            setForm({
-                                                ...form,
-                                                status: e.target.value as QuizStatus,
-                                            })
-                                        }
-                                        className="w-full rounded-md border border-gray-300 shadow-sm p-2"
-                                    >
-                                        <option value={QuizStatus.DRAFT}>Borrador</option>
-                                        <option value={QuizStatus.PUBLISHED}>
-                                            Publicado
-                                        </option>
-                                        <option value={QuizStatus.ARCHIVED}>Archivado</option>
-                                    </select>
                                 </div>
 
                                 <div className="flex justify-end space-x-2 pt-4 border-t">

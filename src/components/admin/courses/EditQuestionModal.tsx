@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { X, AlertCircle, Loader2, Plus } from 'lucide-react';
+import { X, AlertCircle, Loader2, Plus, Image as ImageIcon, Upload, XCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { cn } from '@/lib/utils/cn';
 import { useQuizzesAdmin } from '@/hooks/use-quizzes-admin';
@@ -21,6 +21,8 @@ export default function EditQuestionModal({ isOpen, onClose, question, onSuccess
         createAnswerOption,
         updateAnswerOption,
         deleteAnswerOption,
+        uploadQuestionImage,
+        removeQuestionImage,
         isLoading,
     } = useQuizzesAdmin();
     const [form, setForm] = useState<UpdateQuestionDto>({});
@@ -30,6 +32,13 @@ export default function EditQuestionModal({ isOpen, onClose, question, onSuccess
     >([]);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [loadingOptions, setLoadingOptions] = useState(false);
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imageUrl, setImageUrl] = useState<string>('');
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [useImageUrl, setUseImageUrl] = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const [removingImage, setRemovingImage] = useState(false);
+    const [originalImageUrl, setOriginalImageUrl] = useState<string | null>(null);
 
     const loadAnswerOptions = useCallback(
         async (questionId: string) => {
@@ -58,6 +67,13 @@ export default function EditQuestionModal({ isOpen, onClose, question, onSuccess
                 weight: question.weight,
                 quizId: question.quizId,
             });
+            // Inicializar imagen actual
+            const currentImageUrl = question.imageUrl || null;
+            setOriginalImageUrl(currentImageUrl);
+            setImagePreview(currentImageUrl);
+            setImageUrl(currentImageUrl || '');
+            setImageFile(null);
+            setUseImageUrl(false);
             loadAnswerOptions(question.id);
         }
     }, [isOpen, question, loadAnswerOptions]);
@@ -75,8 +91,28 @@ export default function EditQuestionModal({ isOpen, onClose, question, onSuccess
         if (!validate() || !question) return;
 
         try {
-            console.log('Datos a enviar:', form);
-            await updateQuestion(question.id, form);
+            // Actualizar datos básicos de la pregunta
+            const updateData: UpdateQuestionDto = {
+                ...form,
+                // Si hay una nueva URL de imagen diferente a la original, incluirla
+                imageUrl: useImageUrl && imageUrl.trim() && imageUrl !== originalImageUrl
+                    ? imageUrl.trim()
+                    : undefined,
+            };
+            
+            await updateQuestion(question.id, updateData);
+
+            // Manejar cambios de imagen
+            if (imageFile) {
+                // Subir nuevo archivo de imagen
+                setUploadingImage(true);
+                await uploadQuestionImage(question.id, imageFile);
+            } else if (!imagePreview && originalImageUrl && !imageFile && !imageUrl) {
+                // Si se eliminó la imagen (no hay preview pero había original y no hay nueva imagen)
+                await removeQuestionImage(question.id);
+            } else if (useImageUrl && imageUrl.trim() && imageUrl !== originalImageUrl) {
+                // La URL ya se actualizó en updateData, no necesita acción adicional
+            }
 
             // Crear nuevas opciones de respuesta
             for (const newOption of newAnswerOptions) {
@@ -111,6 +147,8 @@ export default function EditQuestionModal({ isOpen, onClose, question, onSuccess
                 }
             }
             toast.error('Error al actualizar pregunta');
+        } finally {
+            setUploadingImage(false);
         }
     };
 
@@ -119,7 +157,81 @@ export default function EditQuestionModal({ isOpen, onClose, question, onSuccess
         setAnswerOptions([]);
         setNewAnswerOptions([]);
         setErrors({});
+        setImageFile(null);
+        setImageUrl('');
+        setImagePreview(null);
+        setUseImageUrl(false);
+        setOriginalImageUrl(null);
         onClose();
+    };
+
+    const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validar que sea una imagen
+        if (!file.type.startsWith('image/')) {
+            toast.error('Por favor selecciona un archivo de imagen válido');
+            return;
+        }
+
+        // Validar tamaño (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('La imagen no debe exceder 5MB');
+            return;
+        }
+
+        setImageFile(file);
+        setUseImageUrl(false);
+        setImageUrl('');
+
+        // Crear preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const url = e.target.value;
+        setImageUrl(url);
+        setUseImageUrl(true);
+        setImageFile(null);
+        setImagePreview(url || originalImageUrl || null);
+    };
+
+    const removeImage = () => {
+        setImageFile(null);
+        setImageUrl('');
+        setImagePreview(null);
+        setUseImageUrl(false);
+    };
+
+    const handleRemoveImage = async () => {
+        if (!question || !originalImageUrl) return;
+
+        if (!confirm('¿Estás seguro de que deseas eliminar la imagen de esta pregunta?')) {
+            return;
+        }
+
+        setRemovingImage(true);
+        try {
+            await removeQuestionImage(question.id);
+            setOriginalImageUrl(null);
+            setImagePreview(null);
+            setImageUrl('');
+            setImageFile(null);
+            setUseImageUrl(false);
+            toast.success('Imagen eliminada correctamente');
+            // Recargar para actualizar el estado
+            if (onSuccess) onSuccess();
+        } catch (err) {
+            console.error(err);
+            toast.error('Error al eliminar imagen');
+        } finally {
+            setRemovingImage(false);
+        }
     };
 
     const handleDeleteAnswerOption = async (optionId: string) => {
@@ -133,6 +245,20 @@ export default function EditQuestionModal({ isOpen, onClose, question, onSuccess
         }
     };
 
+    // Actualizar estado local de opción
+    const updateLocalAnswerOption = (
+        optionId: string,
+        optionText: string,
+        isCorrect: boolean
+    ) => {
+        setAnswerOptions(
+            answerOptions.map((o) =>
+                o.id === optionId ? { ...o, text: optionText, isCorrect } : o
+            )
+        );
+    };
+
+    // Guardar opción en el backend
     const handleUpdateAnswerOption = async (
         optionId: string,
         optionText: string,
@@ -143,15 +269,15 @@ export default function EditQuestionModal({ isOpen, onClose, question, onSuccess
                 text: optionText,
                 isCorrect,
             });
-            setAnswerOptions(
-                answerOptions.map((o) =>
-                    o.id === optionId ? { ...o, text: optionText, isCorrect } : o
-                )
-            );
+            // El estado local ya está actualizado, solo confirmamos
             toast.success('Opción actualizada');
         } catch (err) {
             console.error(err);
             toast.error('Error al actualizar opción');
+            // Recargar opciones desde el backend en caso de error
+            if (question) {
+                loadAnswerOptions(question.id);
+            }
         }
     };
 
@@ -263,7 +389,144 @@ export default function EditQuestionModal({ isOpen, onClose, question, onSuccess
                             )}
                         </div>
 
-                        {(question.type === QuestionType.MULTIPLE_CHOICE ||
+                        {/* Campo de imagen */}
+                        <div>
+                            <label className="block text-sm font-medium mb-2">
+                                Imagen (Opcional)
+                            </label>
+                            
+                            {/* Mostrar imagen actual si existe */}
+                            {originalImageUrl && !imageFile && !useImageUrl && (
+                                <div className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                    <p className="text-xs text-gray-600 mb-2">Imagen actual:</p>
+                                    <div className="relative inline-block">
+                                        <img
+                                            src={originalImageUrl}
+                                            alt="Imagen actual"
+                                            className="max-h-48 rounded-lg border border-gray-300"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={handleRemoveImage}
+                                            disabled={removingImage}
+                                            className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 disabled:opacity-50"
+                                            title="Eliminar imagen"
+                                        >
+                                            {removingImage ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <XCircle className="h-4 w-4" />
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Tabs para elegir entre subir archivo o URL */}
+                            <div className="flex gap-2 mb-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setUseImageUrl(false);
+                                        if (useImageUrl) {
+                                            setImageUrl('');
+                                            if (!imageFile) {
+                                                setImagePreview(originalImageUrl);
+                                            }
+                                        }
+                                    }}
+                                    className={cn(
+                                        'px-3 py-1 text-sm rounded border',
+                                        !useImageUrl
+                                            ? 'bg-blue-600 text-white border-blue-600'
+                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                    )}
+                                >
+                                    <Upload className="h-4 w-4 inline mr-1" />
+                                    Subir archivo
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setUseImageUrl(true);
+                                        if (!useImageUrl) {
+                                            setImageFile(null);
+                                            if (!imageUrl) {
+                                                setImagePreview(originalImageUrl);
+                                            }
+                                        }
+                                    }}
+                                    className={cn(
+                                        'px-3 py-1 text-sm rounded border',
+                                        useImageUrl
+                                            ? 'bg-blue-600 text-white border-blue-600'
+                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                    )}
+                                >
+                                    <ImageIcon className="h-4 w-4 inline mr-1" />
+                                    Usar URL
+                                </button>
+                            </div>
+
+                            {!useImageUrl ? (
+                                <div>
+                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                            <Upload className="w-8 h-8 mb-2 text-gray-500" />
+                                            <p className="mb-2 text-sm text-gray-500">
+                                                <span className="font-semibold">Click para subir</span> o arrastra y suelta
+                                            </p>
+                                            <p className="text-xs text-gray-500">PNG, JPG, GIF hasta 5MB</p>
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleImageFileSelect}
+                                            className="hidden"
+                                            id="image-upload-edit"
+                                        />
+                                    </label>
+                                </div>
+                            ) : (
+                                <div>
+                                    <input
+                                        type="url"
+                                        value={imageUrl}
+                                        onChange={handleImageUrlChange}
+                                        placeholder="https://ejemplo.com/imagen.jpg"
+                                        className="w-full rounded-md border border-gray-300 shadow-sm p-2"
+                                    />
+                                </div>
+                            )}
+
+                            {/* Preview de nueva imagen */}
+                            {imagePreview && (imageFile || (useImageUrl && imageUrl && imageUrl !== originalImageUrl)) && (
+                                <div className="mt-3 relative">
+                                    <div className="relative inline-block">
+                                        <img
+                                            src={imagePreview}
+                                            alt="Preview"
+                                            className="max-h-48 rounded-lg border border-gray-300"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={removeImage}
+                                            className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700"
+                                            title="Eliminar imagen"
+                                        >
+                                            <XCircle className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        {imageFile ? 'Nueva imagen a subir' : 'Nueva URL de imagen'}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {(question.type === 'MULTIPLE' ||
+                            question.type === 'TRUEFALSE' ||
+                            question.type === QuestionType.MULTIPLE_CHOICE ||
                             question.type === QuestionType.TRUE_FALSE) && (
                             <div>
                                 <label className="block text-sm font-medium mb-2">
@@ -285,25 +548,41 @@ export default function EditQuestionModal({ isOpen, onClose, question, onSuccess
                                                     <input
                                                         type="checkbox"
                                                         checked={option.isCorrect}
-                                                        onChange={(e) =>
+                                                        onChange={(e) => {
+                                                            const newValue = e.target.checked;
+                                                            updateLocalAnswerOption(
+                                                                option.id,
+                                                                option.text,
+                                                                newValue
+                                                            );
                                                             handleUpdateAnswerOption(
                                                                 option.id,
                                                                 option.text,
-                                                                e.target.checked
-                                                            )
-                                                        }
+                                                                newValue
+                                                            );
+                                                        }}
                                                         className="rounded"
                                                     />
                                                     <input
                                                         type="text"
                                                         value={option.text}
-                                                        onChange={(e) =>
-                                                            handleUpdateAnswerOption(
+                                                        onChange={(e) => {
+                                                            updateLocalAnswerOption(
                                                                 option.id,
                                                                 e.target.value,
                                                                 option.isCorrect
-                                                            )
-                                                        }
+                                                            );
+                                                        }}
+                                                        onBlur={async (e) => {
+                                                            const newText = e.target.value.trim();
+                                                            if (newText) {
+                                                                await handleUpdateAnswerOption(
+                                                                    option.id,
+                                                                    newText,
+                                                                    option.isCorrect
+                                                                );
+                                                            }
+                                                        }}
                                                         className="flex-1 rounded-md border border-gray-300 shadow-sm p-1"
                                                     />
                                                     <button
@@ -390,10 +669,24 @@ export default function EditQuestionModal({ isOpen, onClose, question, onSuccess
                             </button>
                             <button
                                 type="submit"
-                                disabled={isLoading}
+                                disabled={isLoading || uploadingImage || removingImage}
                                 className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
                             >
-                                {isLoading ? 'Actualizando...' : 'Actualizar Pregunta'}
+                                {uploadingImage ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 inline animate-spin mr-2" />
+                                        Subiendo imagen...
+                                    </>
+                                ) : removingImage ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 inline animate-spin mr-2" />
+                                        Eliminando imagen...
+                                    </>
+                                ) : isLoading ? (
+                                    'Actualizando...'
+                                ) : (
+                                    'Actualizar Pregunta'
+                                )}
                             </button>
                         </div>
                     </form>

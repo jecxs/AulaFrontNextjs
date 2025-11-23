@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { coursesApi } from '@/lib/api/courses';
 import { progressApi } from '@/lib/api/progress';
 import {
@@ -32,6 +33,7 @@ interface CourseData {
 export default function CourseDetailPage() {
     const params = useParams();
     const courseId = params.courseId as string;
+    const queryClient = useQueryClient();
 
     const [courseData, setCourseData] = useState<CourseData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -43,6 +45,24 @@ export default function CourseDetailPage() {
             loadCourseData();
         }
     }, [courseId]);
+
+    // Escuchar cambios en el progreso del curso para refrescar automáticamente
+    useEffect(() => {
+        const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+            if (
+                event?.query?.queryKey?.[0] === 'course-progress' ||
+                event?.query?.queryKey?.[0] === 'student-course-progress' ||
+                event?.query?.queryKey?.[0] === 'student-enrollments'
+            ) {
+                // Refrescar datos del curso cuando cambie el progreso
+                if (courseId) {
+                    loadCourseData();
+                }
+            }
+        });
+
+        return () => unsubscribe();
+    }, [courseId, queryClient]);
 
     const loadCourseData = async () => {
         try {
@@ -56,12 +76,31 @@ export default function CourseDetailPage() {
                 coursesApi.getMyCourseProgress(courseId).catch(() => null)
             ]);
 
-            // Cargar lecciones para cada módulo
+            // Crear un Set de lecciones completadas desde el progreso
+            const completedLessonIds = new Set<string>();
+            if (progress?.modules) {
+                progress.modules.forEach((moduleProgress: any) => {
+                    if (moduleProgress.lessons) {
+                        moduleProgress.lessons.forEach((lessonProgress: any) => {
+                            if (lessonProgress.isCompleted) {
+                                completedLessonIds.add(lessonProgress.lesson.id);
+                            }
+                        });
+                    }
+                });
+            }
+
+            // Cargar lecciones para cada módulo y marcar como completadas
             const modulesWithLessons = await Promise.all(
                 modules.map(async (module: any) => {
                     try {
                         const lessons = await coursesApi.getModuleLessons(module.id);
-                        return { ...module, lessons };
+                        // Marcar lecciones como completadas basándose en el progreso
+                        const lessonsWithProgress = lessons.map((lesson: any) => ({
+                            ...lesson,
+                            isCompleted: completedLessonIds.has(lesson.id)
+                        }));
+                        return { ...module, lessons: lessonsWithProgress };
                     } catch (error) {
                         console.error(`Error loading lessons for module ${module.id}:`, error);
                         return { ...module, lessons: [] };

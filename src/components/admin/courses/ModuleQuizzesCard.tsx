@@ -15,7 +15,7 @@ interface Props {
 }
 
 export default function ModuleQuizzesCard({ module, onModuleChanged }: Props) {
-    const { getQuizzesByModule, deleteQuiz, isLoading } = useQuizzesAdmin();
+    const { getQuizzesByModule, getQuestionsByQuiz, deleteQuiz, isLoading } = useQuizzesAdmin();
     const [quizzes, setQuizzes] = useState<Quiz[]>([]);
     const [loadingQuizzes, setLoadingQuizzes] = useState(false);
     const [showCreateQuizModal, setShowCreateQuizModal] = useState(false);
@@ -27,7 +27,29 @@ export default function ModuleQuizzesCard({ module, onModuleChanged }: Props) {
         setLoadingQuizzes(true);
         try {
             const data = await getQuizzesByModule(module.id);
-            setQuizzes(data);
+            // Obtener el conteo de preguntas para cada quiz
+            const quizzesWithCount = await Promise.all(
+                data.map(async (quiz) => {
+                    try {
+                        const questions = await getQuestionsByQuiz(quiz.id);
+                        return {
+                            ...quiz,
+                            _count: {
+                                questions: questions.length,
+                            },
+                        };
+                    } catch (err) {
+                        console.error(`Error al cargar preguntas del quiz ${quiz.id}:`, err);
+                        return {
+                            ...quiz,
+                            _count: {
+                                questions: 0,
+                            },
+                        };
+                    }
+                })
+            );
+            setQuizzes(quizzesWithCount);
         } catch (err) {
             console.error(err);
             toast.error('Error al cargar quizzes');
@@ -71,8 +93,29 @@ export default function ModuleQuizzesCard({ module, onModuleChanged }: Props) {
     };
 
     const handleQuizSuccess = () => {
-        loadQuizzes();
+        loadQuizzes(); // Recargar para actualizar el conteo de preguntas
         if (onModuleChanged) onModuleChanged();
+    };
+
+    // Actualizar el conteo de preguntas de un quiz específico
+    const updateQuizQuestionCount = async (quizId: string) => {
+        try {
+            const questions = await getQuestionsByQuiz(quizId);
+            setQuizzes((prevQuizzes) =>
+                prevQuizzes.map((quiz) =>
+                    quiz.id === quizId
+                        ? {
+                              ...quiz,
+                              _count: {
+                                  questions: questions.length,
+                              },
+                          }
+                        : quiz
+                )
+            );
+        } catch (err) {
+            console.error(`Error al actualizar conteo del quiz ${quizId}:`, err);
+        }
     };
 
     return (
@@ -196,7 +239,10 @@ export default function ModuleQuizzesCard({ module, onModuleChanged }: Props) {
                                 <div className="border-t border-gray-200 p-4 bg-gray-50">
                                     <QuizQuestionsCard
                                         quiz={quiz}
-                                        onQuizChanged={handleQuizSuccess}
+                                        onQuizChanged={() => {
+                                            updateQuizQuestionCount(quiz.id);
+                                            if (onModuleChanged) onModuleChanged();
+                                        }}
                                     />
                                 </div>
                             )}

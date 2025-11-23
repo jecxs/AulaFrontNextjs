@@ -338,6 +338,48 @@ export function useQuizzesAdmin() {
         }
     }, []);
 
+    // ========== QUESTION IMAGE ==========
+
+    const uploadQuestionImage = useCallback(
+        async (questionId: string, file: File): Promise<Question> => {
+            setIsLoading(true);
+            setError(null);
+            try {
+                return await questionsApi.uploadImage(questionId, file);
+            } catch (err: unknown) {
+                const errorMessage = getErrorMessage(
+                    err,
+                    'Error al subir imagen de pregunta'
+                );
+                setError(errorMessage);
+                throw err;
+            } finally {
+                setIsLoading(false);
+            }
+        },
+        []
+    );
+
+    const removeQuestionImage = useCallback(
+        async (questionId: string): Promise<Question> => {
+            setIsLoading(true);
+            setError(null);
+            try {
+                return await questionsApi.removeImage(questionId);
+            } catch (err: unknown) {
+                const errorMessage = getErrorMessage(
+                    err,
+                    'Error al eliminar imagen de pregunta'
+                );
+                setError(errorMessage);
+                throw err;
+            } finally {
+                setIsLoading(false);
+            }
+        },
+        []
+    );
+
     return {
         isLoading,
         error,
@@ -362,5 +404,8 @@ export function useQuizzesAdmin() {
         getAnswerOptionsByQuestion,
         updateAnswerOption,
         deleteAnswerOption,
+        // Question Image
+        uploadQuestionImage,
+        removeQuestionImage,
     };
 }
