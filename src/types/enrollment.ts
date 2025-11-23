@@ -1,5 +1,18 @@
 // src/types/enrollment.ts
-import { Course, Enrollment } from './course';
+import { Course } from './course';
+
+export type EnrollmentStatus = 'ACTIVE' | 'COMPLETED' | 'SUSPENDED' | 'EXPIRED';
+
+export interface Enrollment {
+    id: string;
+    userId: string;
+    courseId: string;
+    enrolledById: string;
+    status: EnrollmentStatus;
+    paymentConfirmed: boolean;
+    enrolledAt: string;
+    expiresAt?: string;
+}
 
 export interface EnrollmentProgress {
     completedLessons: number;

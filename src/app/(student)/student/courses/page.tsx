@@ -20,6 +20,8 @@ export default function StudentCoursesPage() {
         status: 'all',
         search: ''
     });
+    const [enrichedEnrollments, setEnrichedEnrollments] = useState<any[]>([]);
+    const [isEnriching, setIsEnriching] = useState(false);
 
     // Query para obtener los cursos del estudiante
     const {
@@ -35,8 +37,50 @@ export default function StudentCoursesPage() {
 
     const enrollments = enrollmentsData?.data || [];
 
+    // Enriquecer enrollments con el conteo real de módulos
+    useEffect(() => {
+        if (enrollments.length > 0 && !isEnriching && enrichedEnrollments.length === 0) {
+            setIsEnriching(true);
+
+            // Obtener el conteo de módulos para cada curso
+            Promise.all(
+                enrollments.map(async (enrollment: any) => {
+                    try {
+                        // Solo obtener el conteo si no está presente o es 0
+                        if (!enrollment.course._count?.modules || enrollment.course._count.modules === 0) {
+                            const modules = await coursesApi.getCourseModules(enrollment.course.id);
+                            return {
+                                ...enrollment,
+                                course: {
+                                    ...enrollment.course,
+                                    _count: {
+                                        ...enrollment.course._count,
+                                        modules: modules.length,
+                                        enrollments: enrollment.course._count?.enrollments || 0
+                                    }
+                                }
+                            };
+                        }
+                        return enrollment;
+                    } catch (error) {
+                        console.error(`Error loading modules count for course ${enrollment.course.id}:`, error);
+                        return enrollment;
+                    }
+                })
+            ).then(enriched => {
+                setEnrichedEnrollments(enriched);
+                setIsEnriching(false);
+            });
+        } else if (enrollments.length === 0 && enrichedEnrollments.length > 0) {
+            setEnrichedEnrollments([]);
+        }
+    }, [enrollments, isEnriching, enrichedEnrollments.length]);
+
+    // Usar los enrollments enriquecidos si están disponibles, sino usar los originales
+    const finalEnrollments = enrichedEnrollments.length > 0 ? enrichedEnrollments : enrollments;
+
     // Filtrar cursos según los filtros aplicados
-    const filteredEnrollments = enrollments.filter(enrollment => {
+    const filteredEnrollments = finalEnrollments.filter(enrollment => {
         // Filtro por búsqueda
         if (filters.search) {
             const searchLower = filters.search.toLowerCase();
@@ -76,7 +120,7 @@ export default function StudentCoursesPage() {
     }, [error]);
 
     // Estados de carga
-    if (isLoading) {
+    if (isLoading || (isEnriching && finalEnrollments.length === 0)) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
                 <LoadingSpinner size="lg" />
@@ -99,12 +143,12 @@ export default function StudentCoursesPage() {
                 <div className="flex items-center space-x-4 text-sm text-gray-600">
                     <div className="flex items-center">
                         <BookOpen className="w-4 h-4 mr-1" />
-                        <span>{enrollments.length} cursos</span>
+                        <span>{finalEnrollments.length} cursos</span>
                     </div>
                     <div className="flex items-center">
                         <TrendingUp className="w-4 h-4 mr-1" />
                         <span>
-                            {enrollments.filter(e => e.status === 'COMPLETED').length} completados
+                            {finalEnrollments.filter(e => e.status === 'COMPLETED').length} completados
                         </span>
                     </div>
                 </div>
@@ -147,13 +191,13 @@ export default function StudentCoursesPage() {
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
                     <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        {enrollments.length === 0
+                        {finalEnrollments.length === 0
                             ? 'No tienes cursos enrollados'
                             : 'No se encontraron cursos'
                         }
                     </h3>
                     <p className="text-gray-600">
-                        {enrollments.length === 0
+                        {finalEnrollments.length === 0
                             ? 'Contacta al administrador para inscribirte en cursos'
                             : 'Intenta ajustar los filtros de búsqueda'
                         }

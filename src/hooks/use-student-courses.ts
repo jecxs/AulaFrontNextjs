@@ -1,4 +1,5 @@
 // src/hooks/use-student-courses.ts
+import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { progressApi } from '@/lib/api/progress';
 import { coursesApi } from '@/lib/api/courses';
@@ -93,6 +94,9 @@ interface UseStudentCoursesReturn {
 
 // Hook principal para obtener cursos del estudiante (para el dashboard)
 export function useStudentCourses(): UseStudentCoursesReturn {
+    const [enrichedEnrollments, setEnrichedEnrollments] = useState<EnrollmentWithCourse[]>([]);
+    const [isEnriching, setIsEnriching] = useState(false);
+
     const query = useQuery({
         queryKey: ['student-enrollments'],
         queryFn: coursesApi.getMyEnrollments,
@@ -104,35 +108,78 @@ export function useStudentCourses(): UseStudentCoursesReturn {
     const enrollments = query.data?.data || [];
     const total = query.data?.total || 0;
 
+    // Enriquecer enrollments con el conteo real de módulos
+    useEffect(() => {
+        if (enrollments.length > 0 && !isEnriching) {
+            setIsEnriching(true);
+
+            // Obtener el conteo de módulos para cada curso
+            Promise.all(
+                enrollments.map(async (enrollment) => {
+                    try {
+                        // Solo obtener el conteo si no está presente o es 0
+                        if (!enrollment.course._count?.modules || enrollment.course._count.modules === 0) {
+                            const modules = await coursesApi.getCourseModules(enrollment.course.id);
+                            return {
+                                ...enrollment,
+                                course: {
+                                    ...enrollment.course,
+                                    _count: {
+                                        ...enrollment.course._count,
+                                        modules: modules.length,
+                                        enrollments: enrollment.course._count?.enrollments || 0
+                                    }
+                                }
+                            };
+                        }
+                        return enrollment;
+                    } catch (error) {
+                        console.error(`Error loading modules count for course ${enrollment.course.id}:`, error);
+                        return enrollment;
+                    }
+                })
+            ).then(enriched => {
+                setEnrichedEnrollments(enriched);
+                setIsEnriching(false);
+            });
+        } else if (enrollments.length === 0) {
+            setEnrichedEnrollments([]);
+            setIsEnriching(false);
+        }
+    }, [enrollments, isEnriching]);
+
+    // Usar los enrollments enriquecidos si están disponibles, sino usar los originales
+    const finalEnrollments = enrichedEnrollments.length > 0 ? enrichedEnrollments : enrollments;
+
     // Calcular estadísticas basadas en los enrollments
     const stats: StudentCoursesStats = {
-        total: enrollments.length,
-        completed: enrollments.filter(e =>
+        total: finalEnrollments.length,
+        completed: finalEnrollments.filter(e =>
             e.progress?.completionPercentage === 100
         ).length,
-        inProgress: enrollments.filter(e =>
+        inProgress: finalEnrollments.filter(e =>
             e.progress &&
             e.progress.completionPercentage > 0 &&
             e.progress.completionPercentage < 100
         ).length,
-        active: enrollments.filter(e => e.status === 'ACTIVE').length,
-        totalHours: enrollments.reduce((acc, e) =>
+        active: finalEnrollments.filter(e => e.status === 'ACTIVE').length,
+        totalHours: finalEnrollments.reduce((acc, e) =>
             acc + (e.course?.estimatedHours || 0), 0
         ),
-        avgProgress: enrollments.length > 0
+        avgProgress: finalEnrollments.length > 0
             ? Math.round(
-                enrollments.reduce((acc, e) =>
+                finalEnrollments.reduce((acc, e) =>
                     acc + (e.progress?.completionPercentage || 0), 0
-                ) / enrollments.length
+                ) / finalEnrollments.length
             )
             : 0
     };
 
     return {
-        enrollments,
+        enrollments: finalEnrollments,
         total,
         stats,
-        isLoading: query.isLoading,
+        isLoading: query.isLoading || isEnriching,
         error: query.error,
         refetch: query.refetch
     };
