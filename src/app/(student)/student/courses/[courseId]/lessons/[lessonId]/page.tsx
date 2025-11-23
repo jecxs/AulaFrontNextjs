@@ -74,6 +74,7 @@ export default function LessonPlayerPage() {
             let progress = { isCompleted: false };
             try {
                 progress = await progressApi.checkLessonProgress(lessonId);
+                console.log('🔍 Progress API Response for lessonId:', lessonId, progress);
             } catch (error) {
                 console.warn('Could not load lesson progress:', error);
             }
