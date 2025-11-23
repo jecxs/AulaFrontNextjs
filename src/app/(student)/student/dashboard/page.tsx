@@ -161,7 +161,7 @@ export default function StudentDashboard() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {enrollments.slice(0, 6).map((enrollment) => (
                             <div
-                                key={enrollment.id}
+                                key={enrollment.course.id}
                                 className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
                             >
                                 {/* Imagen del curso */}
@@ -205,12 +205,15 @@ export default function StudentDashboard() {
                                         {enrollment.course.title}
                                     </h3>
 
-                                    <div className="flex items-center text-sm text-gray-600 mb-4">
-                                        <Users className="w-4 h-4 mr-2" />
-                                        <span>
-                                            {enrollment.course.instructor.firstName} {enrollment.course.instructor.lastName}
-                                        </span>
-                                    </div>
+                                    {enrollment.course.instructor && (
+                                        <div className="flex items-center text-sm text-gray-600 mb-4">
+                                            <Users className="w-4 h-4 mr-2" />
+                                            <span>
+                                                {enrollment.course.instructor.firstName} {enrollment.course.instructor.lastName}
+                                            </span>
+                                        </div>
+                                    )}
+
 
                                     {/* Estadísticas del curso */}
                                     <div className="flex items-center justify-between text-xs text-gray-500 mb-4">

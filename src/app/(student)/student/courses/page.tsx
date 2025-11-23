@@ -41,7 +41,9 @@ export default function StudentCoursesPage() {
         if (filters.search) {
             const searchLower = filters.search.toLowerCase();
             const titleMatch = enrollment.course.title.toLowerCase().includes(searchLower);
-            const instructorMatch = `${enrollment.course.instructor.firstName} ${enrollment.course.instructor.lastName}`.toLowerCase().includes(searchLower);
+            const instructorMatch = enrollment.course.instructor
+                ? `${enrollment.course.instructor.firstName} ${enrollment.course.instructor.lastName}`.toLowerCase().includes(searchLower)
+                : false;
             if (!titleMatch && !instructorMatch) return false;
         }
 
@@ -252,12 +254,14 @@ function CourseCard({ enrollment }: { enrollment: any }) {
                 </p>
 
                 {/* Instructor */}
-                <div className="flex items-center text-sm text-gray-600 mb-4">
-                    <Users className="w-4 h-4 mr-2" />
-                    <span>
-                        {enrollment.course.instructor.firstName} {enrollment.course.instructor.lastName}
-                    </span>
-                </div>
+                {enrollment.course.instructor && (
+                    <div className="flex items-center text-sm text-gray-600 mb-4">
+                        <Users className="w-4 h-4 mr-2" />
+                        <span>
+                            {enrollment.course.instructor.firstName} {enrollment.course.instructor.lastName}
+                        </span>
+                    </div>
+                )}
 
                 {/* Estadísticas del curso */}
                 <div className="flex items-center justify-between text-xs text-gray-500 mb-6">
