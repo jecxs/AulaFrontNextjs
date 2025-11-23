@@ -420,3 +420,38 @@ export interface QueryCoursesDto {
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
 }
+export enum EnrollmentStatus {
+
+    ACTIVE = 'ACTIVE',
+
+    SUSPENDED = 'SUSPENDED',
+
+    COMPLETED = 'COMPLETED',
+
+    EXPIRED = 'EXPIRED',
+
+}
+
+
+
+// ========== ENROLLMENT ==========
+
+export interface Enrollment {
+
+    id: string;
+
+    userId: string;
+
+    courseId: string;
+
+    enrolledById: string;
+
+    status: EnrollmentStatus;
+
+    paymentConfirmed: boolean;
+
+    enrolledAt: string;
+
+    expiresAt?: string;
+
+}
