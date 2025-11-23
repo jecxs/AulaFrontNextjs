@@ -333,7 +333,7 @@ export default function AdminEnrollmentsPage() {
                                                                 style={{
                                                                     width: `${Math.max(0, Math.min(100, enrollment.progress?.completionPercentage || 0))}%`,
                                                                 }}
-                                                            />
+                                                            /> 
                                                         </div>
                                                         <p className="text-xs text-gray-500 mt-1">
                                                             {enrollment.progress 

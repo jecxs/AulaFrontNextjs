@@ -233,23 +233,37 @@ export interface UpdateResourceDto {
 
 // ========== PROGRESS (para contexto) ==========
 export interface CourseProgress {
-    course: Course;
+    courseId: string;
+    userId: string;
+    enrollment: {
+        id: string;
+        enrolledAt: string;
+        expiresAt?: string;
+        status: string;
+    };
+    overall: {
+        totalLessons: number;
+        completedLessons: number;
+        completionPercentage: number;
+        averageScore?: number;
+    };
     modules: Array<{
-        module: Module;
+        moduleId: string;
+        title: string;
+        order: number;
+        totalLessons: number;
+        completedLessons: number;
+        completionPercentage: number;
         lessons: Array<{
-            lesson: Lesson;
+            lessonId: string;
+            title: string;
+            type: LessonType;
+            order: number;
             isCompleted: boolean;
             completedAt?: string;
             score?: number;
         }>;
-        completedLessons: number;
-        totalLessons: number;
-        percentage: number;
     }>;
-    totalLessons: number;
-    completedLessons: number;
-    completionPercentage: number;
-    nextLesson?: Lesson;
 }
 
 // Crear Curso
