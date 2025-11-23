@@ -266,12 +266,14 @@ export default function CourseDetailPage() {
                             </p>
 
                             <div className="flex items-center space-x-6 text-sm text-gray-600">
-                                <div className="flex items-center">
-                                    <Users className="w-4 h-4 mr-2" />
-                                    <span>
-                                        {course.instructor.firstName} {course.instructor.lastName}
-                                    </span>
-                                </div>
+                                {course.instructor && (
+                                    <div className="flex items-center">
+                                        <Users className="w-4 h-4 mr-2" />
+                                        <span>
+                                            {course.instructor.firstName} {course.instructor.lastName}
+                                        </span>
+                                    </div>
+                                )}
                                 <div className="flex items-center">
                                     <BookOpen className="w-4 h-4 mr-2" />
                                     <span>{modules.length} módulos</span>
