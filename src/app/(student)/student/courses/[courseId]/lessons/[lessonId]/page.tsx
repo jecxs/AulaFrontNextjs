@@ -52,6 +52,9 @@ export default function LessonPlayerPage() {
 
     useEffect(() => {
         if (courseId && lessonId) {
+            // ✅ Resetear el estado para evitar mostrar datos de la lección anterior
+            setLessonData(null);
+            setIsLoading(true);
             loadLessonData();
         }
     }, [courseId, lessonId]);
