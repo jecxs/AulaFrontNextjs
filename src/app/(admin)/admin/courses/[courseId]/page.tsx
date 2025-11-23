@@ -28,6 +28,9 @@ import EditModuleModal from '@/components/admin/courses/EditModuleModal';
 import CreateLessonModal from '@/components/admin/courses/CreateLessonModal';
 import EditLessonModal from '@/components/admin/courses/EditLessonModal';
 import EditCourseModal from '@/components/admin/courses/EditCourseModal';
+import CreateQuizModal from '@/components/admin/courses/CreateQuizModal';
+import EditQuizModal from '@/components/admin/courses/EditQuizModal';
+import ModuleQuizzesCard from '@/components/admin/courses/ModuleQuizzesCard';
 
 export default function CourseDetailPage() {
     const params = useParams();
@@ -336,10 +339,11 @@ export default function CourseDetailPage() {
 
                                     {/* Contenido del módulo (expandible) */}
                                     {expandedModules.has(module.id) && (
-                                        <div className="bg-white">
+                                        <div className="bg-white space-y-4 p-4">
                                             {/* Lecciones */}
                                             {module.lessons && module.lessons.length > 0 ? (
-                                                <div className="divide-y divide-gray-100">
+                                                <div className="divide-y divide-gray-100 border border-gray-200 rounded-lg p-3">
+                                                    <h4 className="font-semibold text-gray-900 mb-2">Lecciones</h4>
                                                     {module.lessons.map((lesson, lessonIndex) => {
                                                         const LessonIcon = getLessonIcon(lesson.type);
                                                         const resourcesCount = lesson._count?.resources ?? 0;
@@ -395,7 +399,7 @@ export default function CourseDetailPage() {
                                                     })}
                                                 </div>
                                             ) : (
-                                                <div className="px-4 py-6 text-center">
+                                                <div className="px-4 py-6 text-center border border-gray-200 rounded-lg">
                                                     <p className="text-sm text-gray-500">
                                                         No hay lecciones en este módulo
                                                     </p>
@@ -408,33 +412,11 @@ export default function CourseDetailPage() {
                                                 </div>
                                             )}
 
-                                            {/* Quizzes */}
-                                            {module.quizzes && module.quizzes.length > 0 && (
-                                                <div className="border-t border-gray-200">
-                                                    {module.quizzes.map((quiz) => (
-                                                        <div
-                                                            key={quiz.id}
-                                                            className="px-4 py-3 hover:bg-gray-50 flex items-center justify-between"
-                                                        >
-                                                            <div className="flex items-center space-x-3">
-                                                                <HelpCircle className="h-4 w-4 text-purple-500" />
-                                                                <span className="text-sm text-gray-900">
-                                                                    {quiz.title}
-                                                                </span>
-                                                                <span className="text-xs text-gray-500">
-                                                                    Puntaje: {quiz.passingScore}%
-                                                                </span>
-                                                            </div>
-                                                            <Link
-                                                                href={`/admin/courses/${courseId}/quizzes/${quiz.id}`}
-                                                                className="text-sm text-blue-600 hover:text-blue-700"
-                                                            >
-                                                                Ver Quiz
-                                                            </Link>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
+                                            {/* Quizzes - Nuevo componente */}
+                                            <ModuleQuizzesCard
+                                                module={module}
+                                                onModuleChanged={reloadCourseData}
+                                            />
                                         </div>
                                     )}
                                 </div>
