@@ -200,6 +200,47 @@ export const lessonsApi = {
         return apiClient.post<Lesson>('/lessons', data);
     },
 
+    // Crear lección con video (Admin) - Endpoint con upload de archivo
+    createVideoLesson: async (
+        title: string,
+        moduleId: string,
+        order: number,
+        videoFile: File,
+        durationSec?: number
+    ): Promise<Lesson> => {
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('moduleId', moduleId);
+        formData.append('order', String(order));
+        formData.append('video', videoFile);
+        if (durationSec) {
+            formData.append('durationSec', String(durationSec));
+        }
+
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+
+        const response = await fetch(`${apiBase}/lessons/upload-video`, {
+            method: 'POST',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            let errorMsg = `Error: ${response.status}`;
+            try {
+                const errorJson = JSON.parse(text);
+                errorMsg = errorJson.message || errorJson.error || errorMsg;
+            } catch {
+                errorMsg = text || errorMsg;
+            }
+            throw new Error(errorMsg);
+        }
+
+        return response.json();
+    },
+
     // Obtener todas las lecciones con filtros (Admin)
     getAll: async (params?: {
         page?: number;
@@ -221,6 +262,11 @@ export const lessonsApi = {
     // Obtener lección por ID (reutilizando coursesApi)
     getById: async (id: string): Promise<Lesson> => {
         return coursesApi.getLesson(id);
+    },
+
+    // Obtener lección con sus recursos (incluye PDF y otros archivos adjuntos)
+    getWithResources: async (id: string): Promise<Lesson> => {
+        return apiClient.get<Lesson>(`/lessons/${id}/with-resources`);
     },
 
     // Actualizar lección (Admin)

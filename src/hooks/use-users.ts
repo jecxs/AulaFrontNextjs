@@ -1,9 +1,9 @@
 // src/hooks/use-users.ts
 import { useState } from 'react';
-import { CreateUserDto, User } from '@/types/user';
-import { usersApi} from '@/lib/api/users';
-import { rolesApi, RoleName } from '@/lib/api/roles';
-import { enrollmentsApi, CreateEnrollmentDto } from '@/lib/api/enrollments';
+import { CreateUserDto } from '@/types/user';
+import { usersApi } from '@/lib/api/users';
+import { rolesApi } from '@/lib/api/roles';
+import { enrollmentsApi } from '@/lib/api/enrollments';
 import { toast } from 'react-hot-toast';
 
 export interface CreateStudentDto extends CreateUserDto {

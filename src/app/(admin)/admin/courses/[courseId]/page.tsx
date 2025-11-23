@@ -13,18 +13,14 @@ import {
     ArrowLeft,
     Settings,
     Users,
-    BarChart3,
     FileText,
     Video,
     HelpCircle,
     GripVertical,
-    CheckCircle,
-    Clock
 } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
-import { cn } from '@/lib/utils/cn';
 
 // Importar modales
 import CreateModuleModal from '@/components/admin/courses/CreateModuleModal';
@@ -62,7 +58,7 @@ export default function CourseDetailPage() {
     const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
     const [selectedModuleForLesson, setSelectedModuleForLesson] = useState<string | null>(null);
 
-    const fetchCourseData = async () => {
+    const reloadCourseData = async () => {
         try {
             const [courseData, modulesData] = await Promise.all([
                 getCourseById(courseId),
@@ -70,16 +66,35 @@ export default function CourseDetailPage() {
             ]);
             setCourse(courseData);
             setModules(modulesData);
-        } catch (error) {
-            console.error('Error al cargar curso:', error);
-            toast.error('Error al cargar el curso');
-            router.push('/admin/courses');
+        } catch (err) {
+            console.error('Error al recargar curso:', err);
         }
     };
 
+    // Cargar datos iniciales del curso.
+    // NOTA: `getCourseById` y `getModulesByCourse` provienen del hook `useCoursesAdmin`
+    // y pueden ser recreadas en cada render — incluirlas en las dependencias provoca
+    // que el efecto se ejecute repetidamente. Queremos ejecutar la carga solo cuando
+    // cambia `courseId` (o el router), por eso omitimos intencionalmente esas funciones
+    // de la lista. Deshabilitamos la regla del linter en este caso.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
-        fetchCourseData();
-    }, [courseId]);
+        (async () => {
+            try {
+                const [courseData, modulesData] = await Promise.all([
+                    getCourseById(courseId),
+                    getModulesByCourse(courseId),
+                ]);
+                setCourse(courseData);
+                setModules(modulesData);
+            } catch (err) {
+                console.error('Error al cargar curso:', err);
+                const msg = err instanceof Error ? err.message : String(err);
+                toast.error(msg || 'Error al cargar el curso');
+                router.push('/admin/courses');
+            }
+        })();
+    }, [courseId, router]);
 
     const toggleModule = (moduleId: string) => {
         const newExpanded = new Set(expandedModules);
@@ -97,9 +112,18 @@ export default function CourseDetailPage() {
         try {
             await deleteModule(moduleId);
             toast.success('Módulo eliminado exitosamente');
-            fetchCourseData();
-        } catch (error: any) {
-            toast.error(error.message || 'Error al eliminar módulo');
+            // Recargar datos
+            (async () => {
+                try {
+                    const modulesData = await getModulesByCourse(courseId);
+                    setModules(modulesData);
+                } catch (err) {
+                    console.error(err);
+                }
+            })();
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : String(error);
+            toast.error(msg || 'Error al eliminar módulo');
         }
     };
 
@@ -109,9 +133,17 @@ export default function CourseDetailPage() {
         try {
             await deleteLesson(lessonId);
             toast.success('Lección eliminada exitosamente');
-            fetchCourseData();
-        } catch (error: any) {
-            toast.error(error.message || 'Error al eliminar lección');
+            (async () => {
+                try {
+                    const modulesData = await getModulesByCourse(courseId);
+                    setModules(modulesData);
+                } catch (err) {
+                    console.error(err);
+                }
+            })();
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : String(error);
+            toast.error(msg || 'Error al eliminar lección');
         }
     };
 
@@ -310,6 +342,7 @@ export default function CourseDetailPage() {
                                                 <div className="divide-y divide-gray-100">
                                                     {module.lessons.map((lesson, lessonIndex) => {
                                                         const LessonIcon = getLessonIcon(lesson.type);
+                                                        const resourcesCount = lesson._count?.resources ?? 0;
                                                         return (
                                                             <div
                                                                 key={lesson.id}
@@ -330,9 +363,9 @@ export default function CourseDetailPage() {
                                                                             {Math.floor(lesson.durationSec / 60)} min
                                                                         </span>
                                                                     )}
-                                                                    {lesson._count?.resources > 0 && (
+                                                                    {resourcesCount > 0 && (
                                                                         <span className="text-xs text-blue-600">
-                                                                            {lesson._count.resources} recursos
+                                                                            {resourcesCount} recursos
                                                                         </span>
                                                                     )}
                                                                 </div>
@@ -418,7 +451,7 @@ export default function CourseDetailPage() {
                 courseId={courseId}
                 onSuccess={() => {
                     setShowCreateModuleModal(false);
-                    fetchCourseData();
+                    reloadCourseData();
                 }}
             />
 
@@ -433,7 +466,7 @@ export default function CourseDetailPage() {
                     onSuccess={() => {
                         setShowEditModuleModal(false);
                         setSelectedModule(null);
-                        fetchCourseData();
+                        reloadCourseData();
                     }}
                 />
             )}
@@ -449,7 +482,7 @@ export default function CourseDetailPage() {
                     onSuccess={() => {
                         setShowCreateLessonModal(false);
                         setSelectedModuleForLesson(null);
-                        fetchCourseData();
+                        reloadCourseData();
                     }}
                 />
             )}
@@ -465,7 +498,7 @@ export default function CourseDetailPage() {
                     onSuccess={() => {
                         setShowEditLessonModal(false);
                         setSelectedLesson(null);
-                        fetchCourseData();
+                        reloadCourseData();
                     }}
                 />
             )}
@@ -477,7 +510,7 @@ export default function CourseDetailPage() {
                     course={course}
                     onSuccess={() => {
                         setShowEditCourseModal(false);
-                        fetchCourseData();
+                        reloadCourseData();
                     }}
                 />
             )}

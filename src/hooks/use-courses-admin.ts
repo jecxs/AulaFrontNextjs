@@ -1,7 +1,7 @@
 // src/hooks/use-courses-admin.ts
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { getErrorMessage } from '@/types/api';
 import {
     coursesApi,
@@ -38,7 +38,7 @@ export function useCoursesAdmin() {
     const [error, setError] = useState<string | null>(null);
 
     // ========== COURSES ==========
-    const createCourse = async (data: CreateCourseDto): Promise<Course> => {
+    const createCourse = useCallback(async (data: CreateCourseDto): Promise<Course> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -50,9 +50,9 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const getCourses = async (params?: QueryCoursesDto): Promise<CourseListResponse> => {
+    const getCourses = useCallback(async (params?: QueryCoursesDto): Promise<CourseListResponse> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -64,13 +64,12 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const getCourseById = async (id: string): Promise<Course> => {
+    const getCourseById = useCallback(async (id: string): Promise<Course> => {
         setIsLoading(true);
         setError(null);
         try {
-            // Usar getCourse en lugar de getById
             return await coursesApi.getCourse(id);
         } catch (err: unknown) {
             const errorMessage = getErrorMessage(err, 'Error al cargar curso');
@@ -79,9 +78,9 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const updateCourse = async (
+    const updateCourse = useCallback(async (
         id: string,
         data: UpdateCourseDto
     ): Promise<Course> => {
@@ -96,9 +95,9 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const publishCourse = async (id: string): Promise<Course> => {
+    const publishCourse = useCallback(async (id: string): Promise<Course> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -110,9 +109,9 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const archiveCourse = async (id: string): Promise<Course> => {
+    const archiveCourse = useCallback(async (id: string): Promise<Course> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -124,9 +123,9 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const deleteCourse = async (id: string): Promise<void> => {
+    const deleteCourse = useCallback(async (id: string): Promise<void> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -138,9 +137,9 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const getCourseStats = async (): Promise<CourseStats> => {
+    const getCourseStats = useCallback(async (): Promise<CourseStats> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -155,10 +154,10 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
     // ========== MODULES ==========
-    const createModule = async (data: CreateModuleDto): Promise<Module> => {
+    const createModule = useCallback(async (data: CreateModuleDto): Promise<Module> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -170,9 +169,9 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const getModulesByCourse = async (courseId: string): Promise<Module[]> => {
+    const getModulesByCourse = useCallback(async (courseId: string): Promise<Module[]> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -184,9 +183,9 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const getModuleById = async (id: string): Promise<Module> => {
+    const getModuleById = useCallback(async (id: string): Promise<Module> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -198,9 +197,9 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const updateModule = async (
+    const updateModule = useCallback(async (
         id: string,
         data: UpdateModuleDto
     ): Promise<Module> => {
@@ -215,9 +214,9 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const reorderModules = async (
+    const reorderModules = useCallback(async (
         courseId: string,
         data: ReorderModulesDto
     ): Promise<Module[]> => {
@@ -235,9 +234,9 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const duplicateModule = async (id: string): Promise<Module> => {
+    const duplicateModule = useCallback(async (id: string): Promise<Module> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -249,9 +248,9 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const deleteModule = async (id: string): Promise<void> => {
+    const deleteModule = useCallback(async (id: string): Promise<void> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -263,9 +262,9 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const getModuleNextOrder = async (courseId: string): Promise<number> => {
+    const getModuleNextOrder = useCallback(async (courseId: string): Promise<number> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -280,10 +279,10 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
     // ========== LESSONS ==========
-    const createLesson = async (data: CreateLessonDto): Promise<Lesson> => {
+    const createLesson = useCallback(async (data: CreateLessonDto): Promise<Lesson> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -295,9 +294,29 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const getLessonsByModule = async (moduleId: string): Promise<Lesson[]> => {
+    const createVideoLesson = useCallback(async (
+        title: string,
+        moduleId: string,
+        order: number,
+        videoFile: File,
+        durationSec?: number
+    ): Promise<Lesson> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            return await lessonsApi.createVideoLesson(title, moduleId, order, videoFile, durationSec);
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, 'Error al crear lección de video');
+            setError(errorMessage);
+            throw err;
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    const getLessonsByModule = useCallback(async (moduleId: string): Promise<Lesson[]> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -309,9 +328,9 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const getLessonById = async (id: string): Promise<Lesson> => {
+    const getLessonById = useCallback(async (id: string): Promise<Lesson> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -323,9 +342,23 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const updateLesson = async (
+    const getLessonWithResources = useCallback(async (id: string): Promise<Lesson> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            return await lessonsApi.getWithResources(id);
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, 'Error al cargar lección con recursos');
+            setError(errorMessage);
+            throw err;
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    const updateLesson = useCallback(async (
         id: string,
         data: UpdateLessonDto
     ): Promise<Lesson> => {
@@ -340,9 +373,9 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const reorderLessons = async (
+    const reorderLessons = useCallback(async (
         moduleId: string,
         data: ReorderLessonsDto
     ): Promise<Lesson[]> => {
@@ -360,9 +393,9 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const duplicateLesson = async (id: string): Promise<Lesson> => {
+    const duplicateLesson = useCallback(async (id: string): Promise<Lesson> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -374,9 +407,9 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const deleteLesson = async (id: string): Promise<void> => {
+    const deleteLesson = useCallback(async (id: string): Promise<void> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -388,9 +421,9 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const getLessonNextOrder = async (moduleId: string): Promise<number> => {
+    const getLessonNextOrder = useCallback(async (moduleId: string): Promise<number> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -405,10 +438,10 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
     // ========== RESOURCES ==========
-    const createResource = async (data: CreateResourceDto): Promise<Resource> => {
+    const createResource = useCallback(async (data: CreateResourceDto): Promise<Resource> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -420,9 +453,9 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const getResourcesByLesson = async (lessonId: string): Promise<Resource[]> => {
+    const getResourcesByLesson = useCallback(async (lessonId: string): Promise<Resource[]> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -434,9 +467,9 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const updateResource = async (
+    const updateResource = useCallback(async (
         id: string,
         data: UpdateResourceDto
     ): Promise<Resource> => {
@@ -451,9 +484,9 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const deleteResource = async (id: string): Promise<void> => {
+    const deleteResource = useCallback(async (id: string): Promise<void> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -465,9 +498,9 @@ export function useCoursesAdmin() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    return {
+    return useMemo(() => ({
         isLoading,
         error,
 
@@ -493,8 +526,10 @@ export function useCoursesAdmin() {
 
         // Lessons
         createLesson,
+        createVideoLesson,
         getLessonsByModule,
         getLessonById,
+        getLessonWithResources,
         updateLesson,
         reorderLessons,
         duplicateLesson,
@@ -506,5 +541,38 @@ export function useCoursesAdmin() {
         getResourcesByLesson,
         updateResource,
         deleteResource,
-    };
-}
+    }), [
+        isLoading,
+        error,
+        createCourse,
+        getCourses,
+        getCourseById,
+        updateCourse,
+        publishCourse,
+        archiveCourse,
+        deleteCourse,
+        getCourseStats,
+        createModule,
+        getModulesByCourse,
+        getModuleById,
+        updateModule,
+        reorderModules,
+        duplicateModule,
+        deleteModule,
+        getModuleNextOrder,
+        createLesson,
+        createVideoLesson,
+        getLessonsByModule,
+        getLessonById,
+        getLessonWithResources,
+        updateLesson,
+        reorderLessons,
+        duplicateLesson,
+        deleteLesson,
+        getLessonNextOrder,
+        createResource,
+        getResourcesByLesson,
+        updateResource,
+        deleteResource,
+    ]);
+ }

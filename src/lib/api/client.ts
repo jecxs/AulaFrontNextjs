@@ -72,7 +72,7 @@ class ApiClient {
         const apiError = error as ApiErrorResponse;
         const status = apiError.response?.status;
         const data = apiError.response?.data;
-        const message = data?.message || apiError.message;
+        const message = data?.message || apiError.message || 'Ha ocurrido un error';
 
         switch (status) {
             case 401:
@@ -94,11 +94,11 @@ class ApiClient {
                 if (data?.errors) {
                     Object.values(data.errors).forEach((errorArray: string[]) => {
                         errorArray.forEach((errorMessage: string) => {
-                            toast.error(errorMessage);
+                            toast.error(errorMessage ?? 'Error de validación');
                         });
                     });
                 } else {
-                    toast.error(message);
+                    toast.error(message ?? 'Error de validación');
                 }
                 break;
             case 500:
@@ -125,6 +125,7 @@ class ApiClient {
         return response as T;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async put<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
         const response = await this.client.put<T>(url, data, config);
         return response as T;

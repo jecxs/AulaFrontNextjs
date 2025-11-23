@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useCoursesAdmin } from '../../../hooks/use-courses-admin';
+import { useCoursesAdmin } from '@/hooks/use-courses-admin';
 import {
     CreateCourseDto,
     CourseLevel,
@@ -16,6 +16,8 @@ import { toast } from 'react-hot-toast';
 // Importar estos APIs (deberás tener estos módulos creados)
 import { courseCategoriesApi } from '@/lib/api/course-categories';
 import { instructorsApi } from '@/lib/api/instructors';
+import { CourseCategory } from '@/types/course-category';
+import { Instructor } from '@/types/instructor';
 
 interface CreateCourseModalProps {
     isOpen: boolean;
@@ -45,8 +47,8 @@ export default function CreateCourseModal({
         instructorId: '',
     });
 
-    const [categories, setCategories] = useState<any[]>([]);
-    const [instructors, setInstructors] = useState<any[]>([]);
+    const [categories, setCategories] = useState<CourseCategory[]>([]);
+    const [instructors, setInstructors] = useState<Instructor[]>([]);
     const [loadingData, setLoadingData] = useState(true);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [submitSuccess, setSubmitSuccess] = useState(false);
