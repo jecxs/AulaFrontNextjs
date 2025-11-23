@@ -83,7 +83,16 @@ export default function CourseDetailPage() {
                     if (moduleProgress.lessons) {
                         moduleProgress.lessons.forEach((lessonProgress: any) => {
                             if (lessonProgress.isCompleted) {
-                                completedLessonIds.add(lessonProgress.lesson.id);
+                                // Manejar ambas estructuras posibles del backend:
+                                // 1. { lesson: { id: ... }, isCompleted: true } (estructura esperada según tipos)
+                                // 2. { id: ..., isCompleted: true } o { lessonId: ..., isCompleted: true } (estructura alternativa)
+                                const lessonId = lessonProgress.lesson?.id
+                                    || lessonProgress.lessonId
+                                    || lessonProgress.id;
+
+                                if (lessonId) {
+                                    completedLessonIds.add(lessonId);
+                                }
                             }
                         });
                     }
