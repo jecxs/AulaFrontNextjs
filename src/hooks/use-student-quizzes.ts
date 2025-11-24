@@ -68,7 +68,7 @@ export function useSubmitQuiz() {
                 });
             } else {
                 toast.warning('Quiz completado', {
-                    description: `Obtuviste ${result.score}%. Necesitas ${result.quiz?.passingScore || 70}% para aprobar.`,
+                    description: `Obtuviste ${result.score}%. No alcanzaste el puntaje mínimo para aprobar.`,
                 });
             }
         },
