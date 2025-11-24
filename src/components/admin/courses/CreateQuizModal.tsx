@@ -21,7 +21,6 @@ export default function CreateQuizModal({ isOpen, onClose, moduleId, onSuccess }
         title: '',
         moduleId,
         passingScore: 70,
-        attemptsAllowed: 3,
     });
     const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -76,7 +75,6 @@ export default function CreateQuizModal({ isOpen, onClose, moduleId, onSuccess }
             title: '',
             moduleId,
             passingScore: 70,
-            attemptsAllowed: 3,
         });
         setErrors({});
         onClose();
@@ -167,25 +165,6 @@ export default function CreateQuizModal({ isOpen, onClose, moduleId, onSuccess }
                                                 {errors.passingScore}
                                             </p>
                                         )}
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">
-                                            Intentos permitidos
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            max="10"
-                                            value={form.attemptsAllowed || 3}
-                                            onChange={(e) =>
-                                                setForm({
-                                                    ...form,
-                                                    attemptsAllowed: parseInt(e.target.value),
-                                                })
-                                            }
-                                            className="w-full rounded-md border border-gray-300 shadow-sm p-2"
-                                        />
                                     </div>
                                 </div>
 

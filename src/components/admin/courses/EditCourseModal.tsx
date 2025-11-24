@@ -20,7 +20,7 @@ interface Props {
 
 export default function EditCourseModal({ isOpen, onClose, course, onSuccess }: Props) {
     const { updateCourse } = useCoursesAdmin();
-    const [form, setForm] = useState<UpdateCourseDto>({ title: '', slug: '', summary: '', description: '', level: CourseLevel.BEGINNER, thumbnailUrl: '', estimatedHours: undefined, price: undefined, status: CourseStatus.DRAFT, visibility: CourseVisibility.PRIVATE, categoryId: '', instructorId: '' });
+    const [form, setForm] = useState<UpdateCourseDto>({ title: '', summary: '', description: '', level: CourseLevel.BEGINNER, thumbnailUrl: '', estimatedHours: undefined, price: undefined, status: CourseStatus.DRAFT, visibility: CourseVisibility.PRIVATE, categoryId: '', instructorId: '' });
     const [categories, setCategories] = useState<CourseCategory[]>([]);
     const [instructors, setInstructors] = useState<Instructor[]>([]);
     const [loadingData, setLoadingData] = useState(false);
@@ -30,7 +30,6 @@ export default function EditCourseModal({ isOpen, onClose, course, onSuccess }: 
         if (isOpen && course) {
             setForm({
                 title: course.title || '',
-                slug: course.slug || '',
                 summary: course.summary || '',
                 description: course.description || '',
                 level: course.level || CourseLevel.BEGINNER,
@@ -63,7 +62,6 @@ export default function EditCourseModal({ isOpen, onClose, course, onSuccess }: 
     const validate = () => {
         const e: Record<string,string> = {};
         if (!form.title || !form.title.trim()) e.title = 'El título es requerido';
-        if (!form.slug || !form.slug.trim()) e.slug = 'El slug es requerido';
         if (!form.categoryId) e.categoryId = 'Debes seleccionar categoría';
         if (!form.instructorId) e.instructorId = 'Debes seleccionar instructor';
         setErrors(e);
@@ -121,12 +119,6 @@ export default function EditCourseModal({ isOpen, onClose, course, onSuccess }: 
                                         <label className="block text-sm font-medium mb-1">Título *</label>
                                         <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className={cn('w-full rounded-md border-gray-300 shadow-sm p-2', errors.title && 'border-red-300')} />
                                         {errors.title && (<p className="mt-1 text-sm text-red-600 flex items-center"><AlertCircle className="h-4 w-4 mr-1" />{errors.title}</p>)}
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Slug *</label>
-                                        <input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} className={cn('w-full rounded-md border-gray-300 shadow-sm p-2', errors.slug && 'border-red-300')} />
-                                        {errors.slug && (<p className="mt-1 text-sm text-red-600">{errors.slug}</p>)}
                                     </div>
 
                                     <div>

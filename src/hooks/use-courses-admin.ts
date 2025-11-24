@@ -28,6 +28,7 @@ import {
     UpdateResourceDto,
     QueryCoursesDto,
 } from '@/types/course';
+import {cleanUpdateLessonDto} from "@/lib/utils/dto-cleaner";
 
 /**
  * Hook personalizado para operaciones de ADMIN en cursos
@@ -365,7 +366,8 @@ export function useCoursesAdmin() {
         setIsLoading(true);
         setError(null);
         try {
-            return await lessonsApi.update(id, data);
+            const cleanedData = cleanUpdateLessonDto(data);
+            return await lessonsApi.update(id, cleanedData as UpdateLessonDto);
         } catch (err: unknown) {
             const errorMessage = getErrorMessage(err, 'Error al actualizar lección');
             setError(errorMessage);

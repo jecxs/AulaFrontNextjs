@@ -24,7 +24,6 @@ export default function EditQuizModal({ isOpen, onClose, quiz, onSuccess }: Prop
             setForm({
                 title: quiz.title,
                 passingScore: quiz.passingScore,
-                attemptsAllowed: (quiz as any).attemptsAllowed, // Puede no estar en el tipo pero existe en el backend
             });
         }
     }, [isOpen, quiz]);
@@ -37,12 +36,6 @@ export default function EditQuizModal({ isOpen, onClose, quiz, onSuccess }: Prop
             (form.passingScore < 1 || form.passingScore > 100)
         ) {
             e.passingScore = 'La puntuación debe estar entre 1 y 100';
-        }
-        if (
-            form.attemptsAllowed !== undefined &&
-            (form.attemptsAllowed < 1 || form.attemptsAllowed > 10)
-        ) {
-            e.attemptsAllowed = 'Los intentos permitidos deben estar entre 1 y 10';
         }
         setErrors(e);
         return Object.keys(e).length === 0;
@@ -157,40 +150,6 @@ export default function EditQuizModal({ isOpen, onClose, quiz, onSuccess }: Prop
                                                 {errors.passingScore}
                                             </p>
                                         )}
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">
-                                            Intentos permitidos
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            max="10"
-                                            value={form.attemptsAllowed ?? ''}
-                                            onChange={(e) =>
-                                                setForm({
-                                                    ...form,
-                                                    attemptsAllowed: e.target.value
-                                                        ? parseInt(e.target.value)
-                                                        : undefined,
-                                                })
-                                            }
-                                            className={cn(
-                                                'w-full rounded-md border border-gray-300 shadow-sm p-2',
-                                                errors.attemptsAllowed && 'border-red-300'
-                                            )}
-                                            placeholder="3"
-                                        />
-                                        {errors.attemptsAllowed && (
-                                            <p className="mt-1 text-sm text-red-600 flex items-center">
-                                                <AlertCircle className="h-4 w-4 mr-1" />
-                                                {errors.attemptsAllowed}
-                                            </p>
-                                        )}
-                                        <p className="mt-1 text-xs text-gray-500">
-                                            Número de intentos permitidos (1-10)
-                                        </p>
                                     </div>
                                 </div>
 

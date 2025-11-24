@@ -6,7 +6,6 @@ import { useCoursesAdmin } from '@/hooks/use-courses-admin';
 import {
     CreateCourseDto,
     CourseLevel,
-    CourseStatus,
     CourseVisibility,
 } from '@/types/course';
 import { X, BookOpen, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
@@ -34,14 +33,12 @@ export default function CreateCourseModal({
 
     const [formData, setFormData] = useState<CreateCourseDto>({
         title: '',
-        slug: '',
         summary: '',
         description: '',
         level: CourseLevel.BEGINNER,
         thumbnailUrl: '',
         estimatedHours: undefined,
         price: undefined,
-        status: CourseStatus.DRAFT,
         visibility: CourseVisibility.PRIVATE,
         categoryId: '',
         instructorId: '',
@@ -77,31 +74,11 @@ export default function CreateCourseModal({
         }
     };
 
-    // Generar slug automático del título
-    const generateSlug = (title: string) => {
-        return title
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/(^-|-$)/g, '');
-    };
-
-    const handleTitleChange = (title: string) => {
-        setFormData({
-            ...formData,
-            title,
-            slug: generateSlug(title),
-        });
-    };
-
     const validateForm = (): boolean => {
         const newErrors: Record<string, string> = {};
 
         if (!formData.title.trim()) {
             newErrors.title = 'El título es requerido';
-        }
-
-        if (!formData.slug.trim()) {
-            newErrors.slug = 'El slug es requerido';
         }
 
         if (!formData.categoryId) {
@@ -132,12 +109,31 @@ export default function CreateCourseModal({
         }
 
         try {
-            // Preparar datos
+            // Preparar datos - eliminar campos opcionales vacíos
             const dataToSubmit: CreateCourseDto = {
-                ...formData,
-                estimatedHours: formData.estimatedHours || undefined,
-                price: formData.price || undefined,
+                title: formData.title,
+                categoryId: formData.categoryId,
+                instructorId: formData.instructorId,
+                level: formData.level,
+                visibility: formData.visibility,
             };
+
+            // Solo agregar campos opcionales si tienen valor
+            if (formData.summary?.trim()) {
+                dataToSubmit.summary = formData.summary;
+            }
+            if (formData.description?.trim()) {
+                dataToSubmit.description = formData.description;
+            }
+            if (formData.thumbnailUrl?.trim()) {
+                dataToSubmit.thumbnailUrl = formData.thumbnailUrl;
+            }
+            if (formData.estimatedHours && formData.estimatedHours > 0) {
+                dataToSubmit.estimatedHours = formData.estimatedHours;
+            }
+            if (formData.price && formData.price > 0) {
+                dataToSubmit.price = formData.price;
+            }
 
             await createCourse(dataToSubmit);
 
@@ -159,14 +155,12 @@ export default function CreateCourseModal({
     const handleClose = () => {
         setFormData({
             title: '',
-            slug: '',
             summary: '',
             description: '',
             level: CourseLevel.BEGINNER,
             thumbnailUrl: '',
             estimatedHours: undefined,
             price: undefined,
-            status: CourseStatus.DRAFT,
             visibility: CourseVisibility.PRIVATE,
             categoryId: '',
             instructorId: '',
@@ -234,7 +228,7 @@ export default function CreateCourseModal({
                                         <input
                                             type="text"
                                             value={formData.title}
-                                            onChange={(e) => handleTitleChange(e.target.value)}
+                                            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                                             className={cn(
                                                 'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
                                                 errors.title && 'border-red-300'
@@ -247,31 +241,9 @@ export default function CreateCourseModal({
                                                 {errors.title}
                                             </p>
                                         )}
-                                    </div>
-
-                                    {/* Slug */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Slug (URL amigable) *
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={formData.slug}
-                                            onChange={(e) =>
-                                                setFormData({ ...formData, slug: e.target.value })
-                                            }
-                                            className={cn(
-                                                'w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
-                                                errors.slug && 'border-red-300'
-                                            )}
-                                            placeholder="introduccion-a-react"
-                                        />
-                                        {errors.slug && (
-                                            <p className="mt-1 text-sm text-red-600 flex items-center">
-                                                <AlertCircle className="h-4 w-4 mr-1" />
-                                                {errors.slug}
-                                            </p>
-                                        )}
+                                        <p className="mt-1 text-xs text-gray-500">
+                                            El slug (URL) se generará automáticamente a partir del título
+                                        </p>
                                     </div>
 
                                     {/* Resumen */}

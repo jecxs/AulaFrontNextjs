@@ -59,32 +59,30 @@ export interface Course {
 
 export interface CreateCourseDto {
     title: string;
-    slug: string;
-    summary?: string;
-    description?: string;
-    level: CourseLevel;
-    thumbnailUrl?: string;
-    estimatedHours?: number;
-    price?: number;
-    status?: CourseStatus;
-    visibility?: CourseVisibility;
-    categoryId: string;
-    instructorId: string;
-}
-
-export interface UpdateCourseDto {
-    title?: string;
-    slug?: string;
     summary?: string;
     description?: string;
     level?: CourseLevel;
     thumbnailUrl?: string;
     estimatedHours?: number;
     price?: number;
-    status?: CourseStatus;
+    visibility?: CourseVisibility;
+    categoryId: string;
+    instructorId: string;
+}
+
+
+export interface UpdateCourseDto {
+    title?: string;
+    summary?: string;
+    description?: string;
+    level?: CourseLevel;
+    thumbnailUrl?: string;
+    estimatedHours?: number;
+    price?: number;
     visibility?: CourseVisibility;
     categoryId?: string;
     instructorId?: string;
+    status?: CourseStatus;
 }
 
 export interface CourseListResponse {
@@ -266,37 +264,7 @@ export interface CourseProgress {
     }>;
 }
 
-// Crear Curso
-export interface CreateCourseDto {
-    title: string;
-    slug: string;
-    summary?: string;
-    description?: string;
-    level: CourseLevel;
-    thumbnailUrl?: string;
-    estimatedHours?: number;
-    price?: number;
-    status?: CourseStatus;
-    visibility?: CourseVisibility;
-    categoryId: string;
-    instructorId: string;
-}
 
-// Actualizar Curso
-export interface UpdateCourseDto {
-    title?: string;
-    slug?: string;
-    summary?: string;
-    description?: string;
-    level?: CourseLevel;
-    thumbnailUrl?: string;
-    estimatedHours?: number;
-    price?: number;
-    status?: CourseStatus;
-    visibility?: CourseVisibility;
-    categoryId?: string;
-    instructorId?: string;
-}
 
 // Estadísticas de Cursos
 export interface CourseStats {

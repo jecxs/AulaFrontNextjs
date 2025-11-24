@@ -42,13 +42,13 @@ export interface CreateQuizDto {
     title: string;
     moduleId: string;
     passingScore?: number;
-    attemptsAllowed?: number;
+
 }
 
 export interface UpdateQuizDto {
     title?: string;
     passingScore?: number;
-    attemptsAllowed?: number;
+
 }
 
 // ========== QUESTION ==========
@@ -191,7 +191,6 @@ export interface QuizForStudent {
     moduleId: string;
     passingScore: number;
     timeLimit?: number;
-    attemptsAllowed: number;
     isRequired: boolean;
     order: number;
     questionsCount: number;
@@ -221,7 +220,6 @@ export interface QuizPreview {
     moduleId: string;
     passingScore: number;
     timeLimit?: number;
-    attemptsAllowed: number;
     questionsCount: number;
     totalPoints: number;
     questions: QuestionForStudent[];
