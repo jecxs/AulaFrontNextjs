@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { coursesApi } from '@/lib/api/courses';
 import { progressApi } from '@/lib/api/progress';
+import { quizzesApi } from '@/lib/api/quizzes';
 import { useMarkLessonComplete } from '@/hooks/use-student-courses';
 
 import {
@@ -27,9 +28,11 @@ interface LessonData {
     lesson: any;
     course: any;
     module: any;
+    moduleQuizzes: any[];
     navigation: {
         previousLesson: any | null;
         nextLesson: any | null;
+        nextItem: { type: 'lesson' | 'quiz'; id: string } | null;
     };
     progress: {
         isCompleted: boolean;
@@ -79,12 +82,22 @@ export default function LessonPlayerPage() {
 
             // Cargar módulos para navegación
             const modules = await coursesApi.getCourseModules(courseId);
-            const navigation = await buildNavigation(modules, lessonId);
+
+            // Cargar quizzes del módulo actual
+            let moduleQuizzes: any[] = [];
+            try {
+                moduleQuizzes = await quizzesApi.getByModule(lesson.moduleId);
+            } catch (error) {
+                console.warn('Could not load module quizzes:', error);
+            }
+
+            const navigation = await buildNavigation(modules, lessonId, lesson.moduleId, moduleQuizzes);
 
             setLessonData({
                 lesson,
                 course,
                 module: modules.find(m => m.id === lesson.moduleId),
+                moduleQuizzes,
                 navigation,
                 progress
             });
@@ -98,7 +111,12 @@ export default function LessonPlayerPage() {
         }
     };
 
-    const buildNavigation = async (modules: any[], currentLessonId: string) => {
+    const buildNavigation = async (
+        modules: any[],
+        currentLessonId: string,
+        currentModuleId: string,
+        moduleQuizzes: any[]
+    ) => {
         const allLessons: any[] = [];
 
         for (const module of modules) {
@@ -111,10 +129,27 @@ export default function LessonPlayerPage() {
         }
 
         const currentIndex = allLessons.findIndex(lesson => lesson.id === currentLessonId);
+        const currentLesson = allLessons[currentIndex];
+
+        // Verificar si es la última lección del módulo
+        const moduleLessons = allLessons.filter(l => l.moduleId === currentModuleId);
+        const isLastLessonInModule = currentLesson?.id === moduleLessons[moduleLessons.length - 1]?.id;
+
+        // Determinar el siguiente ítem
+        let nextItem: { type: 'lesson' | 'quiz'; id: string } | null = null;
+
+        if (isLastLessonInModule && moduleQuizzes.length > 0) {
+            // Si es la última lección y hay quizzes, el siguiente es el quiz
+            nextItem = { type: 'quiz', id: moduleQuizzes[0].id };
+        } else if (currentIndex < allLessons.length - 1) {
+            // Si no, el siguiente es la siguiente lección
+            nextItem = { type: 'lesson', id: allLessons[currentIndex + 1].id };
+        }
 
         return {
             previousLesson: currentIndex > 0 ? allLessons[currentIndex - 1] : null,
-            nextLesson: currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null
+            nextLesson: currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null,
+            nextItem
         };
     };
 
@@ -152,13 +187,17 @@ export default function LessonPlayerPage() {
     };
 
     const navigateToNextOrCourse = () => {
-        if (lessonData?.navigation.nextLesson) {
-            router.push(
-                `${ROUTES.STUDENT.COURSES}/${courseId}/lessons/${lessonData.navigation.nextLesson.id}`
-            );
+        if (lessonData?.navigation.nextItem) {
+            const { type, id } = lessonData.navigation.nextItem;
+
+            if (type === 'quiz') {
+                router.push(`${ROUTES.STUDENT.COURSES}/${courseId}/quizzes/${id}`);
+            } else {
+                router.push(`${ROUTES.STUDENT.COURSES}/${courseId}/lessons/${id}`);
+            }
         } else {
             router.push(`${ROUTES.STUDENT.COURSES}/${courseId}`);
-            toast.success('¡Curso completado! 🎉', { duration: 4000 });
+            toast.success('¡Módulo completado! 🎉', { duration: 4000 });
         }
     };
 
@@ -300,17 +339,17 @@ export default function LessonPlayerPage() {
                                                         </div>
                                                     </div>
                                                     <a
-                                                    href={resource.fileUrl || resource.downloadUrl}
-                                                    download={resource.fileName}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="flex-shrink-0 flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                                                        href={resource.fileUrl || resource.downloadUrl}
+                                                        download={resource.fileName}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex-shrink-0 flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                                                     >
-                                                    <Download className="w-4 h-4" />
-                                                    <span>Descargar</span>
-                                                </a>
+                                                        <Download className="w-4 h-4" />
+                                                        <span>Descargar</span>
+                                                    </a>
                                                 </div>
-                                                ))}
+                                            ))}
                                         </div>
                                     </div>
                                 )}
@@ -324,25 +363,25 @@ export default function LessonPlayerPage() {
                                                 <span className="font-medium">{resource.fileName}</span>
                                             </div>
                                             <a
-                                            href={resource.fileUrl || resource.downloadUrl}
-                                            download={resource.fileName}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                                                href={resource.fileUrl || resource.downloadUrl}
+                                                download={resource.fileName}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                                             >
-                                            <Download className="w-4 h-4" />
-                                            <span>Descargar PDF</span>
-                                        </a>
+                                                <Download className="w-4 h-4" />
+                                                <span>Descargar PDF</span>
+                                            </a>
+                                        </div>
+                                        <iframe
+                                            src={`${resource.fileUrl || resource.downloadUrl}#toolbar=1&navpanes=0&scrollbar=1`}
+                                            className="w-full h-[700px]"
+                                            title={resource.fileName}
+                                        />
                                     </div>
-                                    <iframe
-                                    src={`${resource.fileUrl || resource.downloadUrl}#toolbar=1&navpanes=0&scrollbar=1`}
-                                className="w-full h-[700px]"
-                                title={resource.fileName}
-                            />
-                            </div>
-                        ))}
-                    </>
-                    )}
+                                ))}
+                            </>
+                        )}
 
                         {/* CONTENIDO MARKDOWN (solo para lecciones tipo TEXT sin video) */}
                         {lesson.type === 'TEXT' && lesson.markdownContent && !lesson.videoUrl && (
@@ -388,7 +427,11 @@ export default function LessonPlayerPage() {
                                     <>
                                         <CheckCircle className="w-5 h-5" />
                                         <span>
-                                            {navigation.nextLesson ? 'Ir a siguiente lección' : 'Volver al curso'}
+                                            {navigation.nextItem
+                                                ? navigation.nextItem.type === 'quiz'
+                                                    ? 'Ir a evaluación del módulo'
+                                                    : 'Ir a siguiente lección'
+                                                : 'Volver al curso'}
                                         </span>
                                         <ChevronRight className="w-5 h-5" />
                                     </>
@@ -465,13 +508,23 @@ export default function LessonPlayerPage() {
                                     </div>
                                 )}
 
-                                {navigation.nextLesson ? (
+                                {navigation.nextItem ? (
                                     <button
-                                        onClick={() => navigateToLesson(navigation.nextLesson.id)}
-                                        className="w-full flex items-center justify-between p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                                        onClick={() => {
+                                            if (navigation.nextItem!.type === 'quiz') {
+                                                router.push(`${ROUTES.STUDENT.COURSES}/${courseId}/quizzes/${navigation.nextItem!.id}`);
+                                            } else {
+                                                navigateToLesson(navigation.nextItem!.id);
+                                            }
+                                        }}
+                                        className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${
+                                            navigation.nextItem.type === 'quiz'
+                                                ? 'bg-purple-900/30 hover:bg-purple-900/50 border border-purple-500/30'
+                                                : 'bg-gray-700 hover:bg-gray-600'
+                                        }`}
                                     >
-                                        <span className="text-xs text-gray-400 truncate max-w-[150px]">
-                                            {navigation.nextLesson.title}
+                                        <span className="text-xs text-gray-400 truncate max-w-[120px]">
+                                            {navigation.nextItem.type === 'quiz' ? 'Evaluación del módulo' : navigation.nextLesson?.title}
                                         </span>
                                         <div className="flex items-center space-x-2">
                                             <span className="text-sm">Siguiente</span>
@@ -480,7 +533,7 @@ export default function LessonPlayerPage() {
                                     </button>
                                 ) : (
                                     <div className="p-3 bg-gray-700/50 rounded-lg text-center text-sm text-gray-500">
-                                        Última lección
+                                        Fin del módulo
                                     </div>
                                 )}
                             </div>
