@@ -218,6 +218,7 @@ export interface QuizPreview {
     id: string;
     title: string;
     description?: string;
+    moduleId: string;
     passingScore: number;
     timeLimit?: number;
     attemptsAllowed: number;
