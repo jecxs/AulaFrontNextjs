@@ -230,8 +230,7 @@ export interface QuizPreview {
 // ========== QUIZ SUBMISSION ==========
 export interface QuizAnswer {
     questionId: string;
-    answerOptionIds?: string[]; // Para MULTIPLE_CHOICE, TRUE_FALSE
-    textAnswer?: string; // Para SHORT_ANSWER, ESSAY
+    selectedOptionIds: string[]; // Para SINGLE, MULTIPLE, TRUEFALSE (coincide con backend)
 }
 
 export interface SubmitQuizDto {
@@ -240,20 +239,18 @@ export interface SubmitQuizDto {
 }
 
 export interface QuizSubmissionResult {
-    id: string;
     quizId: string;
-    userId: string;
     score: number;
+    maxScore: number;
+    percentage: number;
     passed: boolean;
-    submittedAt: string;
+    submittedAt: Date;
     answers: {
         questionId: string;
-        questionText: string;
-        questionWeight: number;
-        answerOptionIds?: string[];
-        textAnswer?: string;
+        selectedOptions: string[];
+        correctOptions: string[];
         isCorrect: boolean;
-        pointsEarned: number;
+        points: number;
     }[];
 }
 
