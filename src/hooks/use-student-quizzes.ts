@@ -64,11 +64,11 @@ export function useSubmitQuiz() {
             // Mostrar mensaje según el resultado
             if (result.passed) {
                 toast.success('¡Felicitaciones!', {
-                    description: `Has aprobado el quiz con ${result.score}% de puntaje.`,
+                    description: `Has aprobado el quiz con ${result.percentage}% de puntaje.`,
                 });
             } else {
                 toast.warning('Quiz completado', {
-                    description: `Obtuviste ${result.score}%. No alcanzaste el puntaje mínimo para aprobar.`
+                    description: `Obtuviste ${result.percentage}%. No alcanzaste el puntaje mínimo para aprobar.`,
                 });
             }
         },

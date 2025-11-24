@@ -88,35 +88,24 @@ export default function QuizAttemptPage() {
             const existing = newAnswers.get(questionId);
 
             if (isMultipleChoice) {
-                // Para MULTIPLE_CHOICE, permitir múltiples selecciones
-                const currentIds = existing?.answerOptionIds || [];
+                // Para MULTIPLE, permitir múltiples selecciones
+                const currentIds = existing?.selectedOptionIds || [];
                 const newIds = currentIds.includes(answerOptionId)
                     ? currentIds.filter((id) => id !== answerOptionId)
                     : [...currentIds, answerOptionId];
 
                 newAnswers.set(questionId, {
                     questionId,
-                    answerOptionIds: newIds,
+                    selectedOptionIds: newIds,
                 });
             } else {
-                // Para TRUE_FALSE, solo una opción
+                // Para SINGLE y TRUEFALSE, solo una opción
                 newAnswers.set(questionId, {
                     questionId,
-                    answerOptionIds: [answerOptionId],
+                    selectedOptionIds: [answerOptionId],
                 });
             }
 
-            return newAnswers;
-        });
-    };
-
-    const handleTextAnswerChange = (questionId: string, text: string) => {
-        setAnswers((prev) => {
-            const newAnswers = new Map(prev);
-            newAnswers.set(questionId, {
-                questionId,
-                textAnswer: text,
-            });
             return newAnswers;
         });
     };
@@ -310,7 +299,7 @@ export default function QuizAttemptPage() {
                             currentQuestion.type === 'MULTIPLE' ||
                             currentQuestion.type === 'TRUEFALSE') && (
                             currentQuestion.answerOptions.map((option) => {
-                                const isSelected = currentAnswer?.answerOptionIds?.includes(option.id);
+                                const isSelected = currentAnswer?.selectedOptionIds?.includes(option.id);
                                 const isMultipleChoice = currentQuestion.type === 'MULTIPLE';
 
                                 return (
