@@ -4,11 +4,19 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { coursesApi } from '@/lib/api/courses';
-import { BookOpen, Clock, Users, TrendingUp, Search, Filter, ChevronRight } from 'lucide-react';
-import Link from 'next/link';
-import { ROUTES } from '@/lib/utils/constants';
+import {
+    BookOpen,
+    Search,
+    Filter,
+    TrendingUp,
+    Award,
+    LayoutGrid,
+    List,
+    SlidersHorizontal
+} from 'lucide-react';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { toast } from 'react-hot-toast';
+import CourseCard from '@/components/student/course-card';
 
 interface CourseFilters {
     status: 'all' | 'active' | 'completed' | 'in-progress';
@@ -20,6 +28,7 @@ export default function StudentCoursesPage() {
         status: 'all',
         search: ''
     });
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
     // Query para obtener los cursos del estudiante
     const {
@@ -34,6 +43,22 @@ export default function StudentCoursesPage() {
     });
 
     const enrollments = enrollmentsData?.data || [];
+
+    // Calcular estadísticas
+    const stats = {
+        total: enrollments.length,
+        completed: enrollments.filter(e => e.status === 'COMPLETED').length,
+        inProgress: enrollments.filter(e =>
+            e.status === 'ACTIVE' &&
+            e.progress &&
+            e.progress.completionPercentage > 0 &&
+            e.progress.completionPercentage < 100
+        ).length,
+        notStarted: enrollments.filter(e =>
+            e.status === 'ACTIVE' &&
+            (!e.progress || e.progress.completionPercentage === 0)
+        ).length
+    };
 
     // Filtrar cursos según los filtros aplicados
     const filteredEnrollments = enrollments.filter(enrollment => {
@@ -79,218 +104,191 @@ export default function StudentCoursesPage() {
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
-                <LoadingSpinner size="lg" />
+                <div className="text-center">
+                    <LoadingSpinner size="lg" />
+                    <p className="mt-4 text-[#001F3F]/60">Cargando tus cursos...</p>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Mis Cursos</h1>
-                    <p className="text-gray-600">
-                        Gestiona y accede a todos tus cursos enrollados
-                    </p>
-                </div>
+        <div className="max-w-[1400px] mx-auto space-y-8">
+            {/* Hero Header mejorado */}
+            <div className="relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-[#001F3F] via-[#001F3F]/95 to-[#00364D] rounded-3xl" />
+                <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-5" />
 
-                {/* Estadísticas rápidas */}
-                <div className="flex items-center space-x-4 text-sm text-gray-600">
-                    <div className="flex items-center">
-                        <BookOpen className="w-4 h-4 mr-1" />
-                        <span>{enrollments.length} cursos</span>
-                    </div>
-                    <div className="flex items-center">
-                        <TrendingUp className="w-4 h-4 mr-1" />
-                        <span>
-                            {enrollments.filter(e => e.status === 'COMPLETED').length} completados
-                        </span>
+                <div className="relative px-8 py-10">
+                    <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+                        {/* Título y descripción */}
+                        <div className="flex-1">
+                            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur-sm rounded-full mb-4">
+                                <BookOpen className="w-4 h-4 text-[#00B4D8]" />
+                                <span className="text-sm font-medium text-white/90">
+                                    Mi Biblioteca de Cursos
+                                </span>
+                            </div>
+
+                            <h1 className="text-4xl font-bold text-white mb-3">
+                                Mis Cursos
+                            </h1>
+                            <p className="text-lg text-white/70 max-w-2xl">
+                                Gestiona tu progreso y continúa tu camino de aprendizaje
+                            </p>
+                        </div>
+
+                        {/* Estadísticas cards mini */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10">
+                                <p className="text-xs font-medium text-white/60 mb-1">Total</p>
+                                <p className="text-2xl font-bold text-white">{stats.total}</p>
+                            </div>
+                            <div className="bg-emerald-500/20 backdrop-blur-md rounded-xl p-4 border border-emerald-500/20">
+                                <p className="text-xs font-medium text-emerald-100 mb-1">Completados</p>
+                                <p className="text-2xl font-bold text-white">{stats.completed}</p>
+                            </div>
+                            <div className="bg-[#00B4D8]/20 backdrop-blur-md rounded-xl p-4 border border-[#00B4D8]/20">
+                                <p className="text-xs font-medium text-[#00B4D8] mb-1">En progreso</p>
+                                <p className="text-2xl font-bold text-white">{stats.inProgress}</p>
+                            </div>
+                            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10">
+                                <p className="text-xs font-medium text-white/60 mb-1">Sin iniciar</p>
+                                <p className="text-2xl font-bold text-white">{stats.notStarted}</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Filtros y búsqueda */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <div className="flex flex-col sm:flex-row gap-4">
-                    {/* Barra de búsqueda */}
-                    <div className="flex-1 relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                        <input
-                            type="text"
-                            placeholder="Buscar cursos..."
-                            value={filters.search}
-                            onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
+            {/* Filtros y búsqueda mejorados */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <div className="flex flex-col lg:flex-row gap-4">
+                    {/* Barra de búsqueda mejorada */}
+                    <div className="flex-1">
+                        <div className="relative group">
+                            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#001F3F]/40 w-5 h-5 group-hover:text-[#00B4D8] transition-colors" />
+                            <input
+                                type="text"
+                                placeholder="Buscar por curso o instructor..."
+                                value={filters.search}
+                                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                                className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#00B4D8] focus:border-[#00B4D8] transition-all duration-300 text-[#001F3F] placeholder:text-[#001F3F]/40"
+                            />
+                        </div>
                     </div>
 
-                    {/* Filtro por estado */}
-                    <div className="flex items-center space-x-2">
-                        <Filter className="w-4 h-4 text-gray-500" />
-                        <select
-                            value={filters.status}
-                            onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value as any }))}
-                            className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                            <option value="all">Todos los cursos</option>
-                            <option value="active">Activos</option>
-                            <option value="in-progress">En progreso</option>
-                            <option value="completed">Completados</option>
-                        </select>
+                    {/* Filtro por estado mejorado */}
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 px-4 py-3.5 bg-gray-50 rounded-xl">
+                            <SlidersHorizontal className="w-5 h-5 text-[#001F3F]/60" />
+                            <select
+                                value={filters.status}
+                                onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value as any }))}
+                                className="bg-transparent border-none focus:ring-0 text-sm font-semibold text-[#001F3F] cursor-pointer"
+                            >
+                                <option value="all">Todos</option>
+                                <option value="active">Activos</option>
+                                <option value="in-progress">En progreso</option>
+                                <option value="completed">Completados</option>
+                            </select>
+                        </div>
+
+                        {/* Toggle de vista (grid/list) */}
+                        <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl">
+                            <button
+                                onClick={() => setViewMode('grid')}
+                                className={`p-2.5 rounded-lg transition-all duration-300 ${
+                                    viewMode === 'grid'
+                                        ? 'bg-white text-[#00B4D8] shadow-sm'
+                                        : 'text-[#001F3F]/40 hover:text-[#001F3F]/60'
+                                }`}
+                                title="Vista de cuadrícula"
+                            >
+                                <LayoutGrid className="w-5 h-5" />
+                            </button>
+                            <button
+                                onClick={() => setViewMode('list')}
+                                className={`p-2.5 rounded-lg transition-all duration-300 ${
+                                    viewMode === 'list'
+                                        ? 'bg-white text-[#00B4D8] shadow-sm'
+                                        : 'text-[#001F3F]/40 hover:text-[#001F3F]/60'
+                                }`}
+                                title="Vista de lista"
+                            >
+                                <List className="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
                 </div>
+
+                {/* Resultados de búsqueda */}
+                {filters.search && (
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                        <p className="text-sm text-[#001F3F]/60">
+                            Mostrando <span className="font-bold text-[#00B4D8]">{filteredEnrollments.length}</span> de <span className="font-bold">{enrollments.length}</span> cursos
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* Lista de cursos */}
             {filteredEnrollments.length === 0 ? (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-                    <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        {enrollments.length === 0
-                            ? 'No tienes cursos enrollados'
-                            : 'No se encontraron cursos'
-                        }
-                    </h3>
-                    <p className="text-gray-600">
-                        {enrollments.length === 0
-                            ? 'Contacta al administrador para inscribirte en cursos'
-                            : 'Intenta ajustar los filtros de búsqueda'
-                        }
-                    </p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {filteredEnrollments.map((enrollment) => (
-                        <CourseCard key={enrollment.id} enrollment={enrollment} />
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-}
+                <div className="relative overflow-hidden bg-white rounded-2xl border border-gray-100 p-16 text-center">
+                    <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-transparent" />
 
-// Componente para cada tarjeta de curso
-function CourseCard({ enrollment }: { enrollment: any }) {
-    const getStatusBadge = (status: string) => {
-        switch (status) {
-            case 'ACTIVE':
-                return (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Activo
-                    </span>
-                );
-            case 'COMPLETED':
-                return (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        Completado
-                    </span>
-                );
-            case 'SUSPENDED':
-                return (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        Suspendido
-                    </span>
-                );
-            default:
-                return (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        {status}
-                    </span>
-                );
-        }
-    };
-
-    const progressPercentage = enrollment.progress?.completionPercentage || 0;
-
-    return (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-            {/* Imagen del curso */}
-            <div className="aspect-video bg-gradient-to-r from-blue-500 to-purple-600 relative">
-                {enrollment.course.thumbnailUrl ? (
-                    <img
-                        src={enrollment.course.thumbnailUrl}
-                        alt={enrollment.course.title}
-                        className="w-full h-full object-cover"
-                    />
-                ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                        <BookOpen className="w-12 h-12 text-white/80" />
-                    </div>
-                )}
-
-                {/* Badge de estado */}
-                <div className="absolute top-3 left-3">
-                    {getStatusBadge(enrollment.status)}
-                </div>
-
-                {/* Progreso overlay */}
-                {enrollment.progress && progressPercentage > 0 && (
-                    <div className="absolute bottom-3 left-3 right-3">
-                        <div className="bg-white/90 backdrop-blur-sm rounded-lg p-2">
-                            <div className="flex items-center justify-between text-xs mb-1">
-                                <span className="font-medium text-gray-700">Progreso</span>
-                                <span className="font-bold text-gray-900">{progressPercentage}%</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div
-                                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                    style={{ width: `${progressPercentage}%` }}
-                                />
-                            </div>
+                    <div className="relative">
+                        <div className="w-24 h-24 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <BookOpen className="w-12 h-12 text-gray-400" />
                         </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Contenido */}
-            <div className="p-6">
-                <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
-                    {enrollment.course.title}
-                </h3>
-
-                <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                    {enrollment.course.description}
-                </p>
-
-                {/* Instructor */}
-                {enrollment.course.instructor && (
-                    <div className="flex items-center text-sm text-gray-600 mb-4">
-                        <Users className="w-4 h-4 mr-2" />
-                        <span>
-                            {enrollment.course.instructor.firstName} {enrollment.course.instructor.lastName}
-                        </span>
-                    </div>
-                )}
-
-                {/* Estadísticas del curso */}
-                <div className="flex items-center justify-between text-xs text-gray-500 mb-6">
-                    <div className="flex items-center space-x-4">
-                        <div className="flex items-center">
-                            <BookOpen className="w-3 h-3 mr-1" />
-                            <span>{enrollment.course._count?.modules || 0} módulos</span>
-                        </div>
-                        {enrollment.course.estimatedHours && (
-                            <div className="flex items-center">
-                                <Clock className="w-3 h-3 mr-1" />
-                                <span>{enrollment.course.estimatedHours}h</span>
-                            </div>
+                        <h3 className="text-2xl font-bold text-[#001F3F] mb-3">
+                            {enrollments.length === 0
+                                ? 'No tienes cursos enrollados'
+                                : 'No se encontraron cursos'
+                            }
+                        </h3>
+                        <p className="text-[#001F3F]/60 max-w-md mx-auto mb-6">
+                            {enrollments.length === 0
+                                ? 'Contacta al administrador para inscribirte en cursos y comenzar tu viaje de aprendizaje'
+                                : 'Intenta ajustar los filtros de búsqueda para encontrar tus cursos'
+                            }
+                        </p>
+                        {filters.search && (
+                            <button
+                                onClick={() => setFilters({ status: 'all', search: '' })}
+                                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#00B4D8] to-[#0096C7] text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-[#00B4D8]/25 transition-all duration-300"
+                            >
+                                Limpiar filtros
+                            </button>
                         )}
                     </div>
-                    <div className="text-gray-400">
-                        Inscrito: {new Date(enrollment.enrolledAt).toLocaleDateString('es-ES')}
-                    </div>
                 </div>
+            ) : (
+                <>
+                    {/* Grid de cursos */}
+                    <div className={
+                        viewMode === 'grid'
+                            ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+                            : 'grid grid-cols-1 gap-4'
+                    }>
+                        {filteredEnrollments.map((enrollment) => (
+                            <CourseCard key={enrollment.id} enrollment={enrollment} />
+                        ))}
+                    </div>
 
-                {/* Botón de acceso */}
-                <Link
-                    href={`${ROUTES.STUDENT.COURSES}/${enrollment.course.id}`}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center group"
-                >
-                    {progressPercentage === 100 ? 'Revisar curso' : 'Continuar curso'}
-                    <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                </Link>
-            </div>
+                    {/* Info adicional */}
+                    {filteredEnrollments.length > 0 && (
+                        <div className="flex items-center justify-center pt-8">
+                            <div className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-full border border-gray-200">
+                                <Award className="w-5 h-5 text-[#00B4D8]" />
+                                <span className="text-sm font-semibold text-[#001F3F]">
+                                    {filteredEnrollments.length} {filteredEnrollments.length === 1 ? 'curso disponible' : 'cursos disponibles'}
+                                </span>
+                            </div>
+                        </div>
+                    )}
+                </>
+            )}
         </div>
     );
 }

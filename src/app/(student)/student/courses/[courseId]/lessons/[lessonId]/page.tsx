@@ -8,19 +8,14 @@ import { progressApi } from '@/lib/api/progress';
 import { quizzesApi } from '@/lib/api/quizzes';
 import { useMarkLessonComplete } from '@/hooks/use-student-courses';
 
-import {
-    ChevronLeft,
-    ChevronRight,
-    CheckCircle,
-    BookOpen,
-    FileText,
-    Download
-} from 'lucide-react';
-import Link from 'next/link';
+import { BookOpen, FileText, AlertCircle } from 'lucide-react';
 import { ROUTES } from '@/lib/utils/constants';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import VideoPlayer from '@/components/course/VideoPlayer';
+import LessonHeader from '@/components/course/LessonHeader';
 import LessonSidebar from '@/components/course/LessonSidebar';
+import LessonResources from '@/components/course/LessonResources';
+import CompleteButton from '@/components/course/CompleteButton';
 import { toast } from 'react-hot-toast';
 
 // ========== INTERFACES ==========
@@ -157,7 +152,7 @@ export default function LessonPlayerPage() {
                 console.warn('Could not load course progress:', err);
             }
 
-            // ✅ NUEVO: Cargar información de intentos de todos los quizzes del curso
+            // Cargar información de intentos de todos los quizzes del curso
             const allQuizzes = enrichedModules.flatMap(m => m.quizzes || []);
 
             await Promise.all(
@@ -178,7 +173,6 @@ export default function LessonPlayerPage() {
                         };
                     } catch (err) {
                         console.warn(`Could not load attempts for quiz ${quiz.id}:`, err);
-                        // Si hay error, asumir que no tiene intentos
                         courseProgress.quizAttempts[quiz.id] = {
                             passed: false,
                             bestScore: 0,
@@ -333,7 +327,13 @@ export default function LessonPlayerPage() {
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-gray-900">
-                <LoadingSpinner size="lg" />
+                <div className="text-center">
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-[#00B4D8]/20 rounded-full blur-2xl" />
+                        <LoadingSpinner size="lg" />
+                    </div>
+                    <p className="mt-6 text-white/70 font-medium">Cargando lección...</p>
+                </div>
             </div>
         );
     }
@@ -341,17 +341,17 @@ export default function LessonPlayerPage() {
     if (error || !lessonData) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-gray-900">
-                <div className="text-center">
-                    <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <BookOpen className="w-6 h-6 text-red-600" />
+                <div className="text-center max-w-md mx-auto px-4">
+                    <div className="w-20 h-20 bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto mb-5 border border-red-500/20">
+                        <AlertCircle className="w-10 h-10 text-red-500" strokeWidth={1.5} />
                     </div>
-                    <h3 className="text-lg font-semibold text-white mb-2">
-                        Error al cargar la lección
+                    <h3 className="text-2xl font-bold text-white mb-3">
+                        No se pudo cargar la lección
                     </h3>
-                    <p className="text-gray-400 mb-4">{error}</p>
+                    <p className="text-white/60 mb-8">{error}</p>
                     <button
                         onClick={loadLessonData}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        className="px-8 py-3.5 bg-[#00B4D8] text-white font-semibold rounded-xl hover:bg-[#00B4D8]/90 transition-all duration-300 shadow-lg shadow-[#00B4D8]/20"
                     >
                         Intentar nuevamente
                     </button>
@@ -366,36 +366,12 @@ export default function LessonPlayerPage() {
     return (
         <div className="min-h-screen bg-gray-900 text-white flex flex-col">
             {/* Header */}
-            <div className="bg-gray-800 border-b border-gray-700 flex-shrink-0">
-                <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between h-16">
-                        <div className="flex items-center space-x-4 flex-1 min-w-0">
-                            <Link
-                                href={`${ROUTES.STUDENT.COURSES}/${courseId}`}
-                                className="text-gray-400 hover:text-white transition-colors flex-shrink-0"
-                            >
-                                <ChevronLeft className="w-5 h-5" />
-                            </Link>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-xs text-gray-400 truncate">
-                                    {currentModule?.title || 'Módulo'}
-                                </p>
-                                <h1 className="text-lg font-semibold truncate">{lesson.title}</h1>
-                            </div>
-                        </div>
-
-                        {/* Indicador de completado */}
-                        {progress.isCompleted && (
-                            <div className="flex items-center space-x-2 text-green-400 flex-shrink-0 ml-4">
-                                <CheckCircle className="w-5 h-5" />
-                                <span className="text-sm font-medium hidden sm:inline">
-                                    Lección completada
-                                </span>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
+            <LessonHeader
+                courseId={courseId}
+                moduleTitle={currentModule?.title || 'Módulo'}
+                lessonTitle={lesson.title}
+                isCompleted={progress.isCompleted}
+            />
 
             {/* Contenido principal con sidebar */}
             <div className="flex-1 flex overflow-hidden">
@@ -414,92 +390,16 @@ export default function LessonPlayerPage() {
                                         console.log('Video ended');
                                         toast.success('¡Video completado! 🎉');
                                     }}
-                                    className="w-full"
+                                    className="w-full rounded-2xl overflow-hidden shadow-2xl"
                                 />
                             )}
 
-                            {/* SECCIÓN DE RECURSOS */}
-                            {resources.length > 0 && (
-                                <>
-                                    {/* Si es VIDEO: mostrar solo lista compacta */}
-                                    {lesson.type === 'VIDEO' && (
-                                        <div className="bg-gray-800 rounded-lg p-6">
-                                            <h2 className="text-xl font-bold mb-4 flex items-center space-x-2">
-                                                <FileText className="w-6 h-6 text-blue-400" />
-                                                <span>Recursos de la lección</span>
-                                            </h2>
-                                            <div className="space-y-3">
-                                                {resources.map((resource: any) => (
-                                                    <div
-                                                        key={resource.id}
-                                                        className="bg-gray-700 rounded-lg p-4 flex items-center justify-between hover:bg-gray-600 transition-colors"
-                                                    >
-                                                        <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                                            <div className="flex-shrink-0 w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                                                                <FileText className="w-5 h-5 text-blue-400" />
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className="font-medium text-white truncate">
-                                                                    {resource.fileName}
-                                                                </p>
-                                                                {resource.sizeKb && (
-                                                                    <p className="text-sm text-gray-400">
-                                                                        {resource.sizeKb < 1024
-                                                                            ? `${resource.sizeKb} KB`
-                                                                            : `${(resource.sizeKb / 1024).toFixed(2)} MB`
-                                                                        }
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        <a
-                                                            href={resource.fileUrl || resource.downloadUrl}
-                                                            download={resource.fileName}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="flex-shrink-0 flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                                                        >
-                                                            <Download className="w-4 h-4" />
-                                                            <span>Descargar</span>
-                                                        </a>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Si es TEXT: mostrar visor completo de PDF */}
-                                    {lesson.type === 'TEXT' && resources.map((resource: any) => (
-                                        <div key={resource.id} className="bg-white rounded-lg overflow-hidden">
-                                            <div className="bg-gray-100 p-4 border-b border-gray-200 flex items-center justify-between">
-                                                <div className="flex items-center space-x-2 text-gray-700">
-                                                    <FileText className="w-5 h-5" />
-                                                    <span className="font-medium">{resource.fileName}</span>
-                                                </div>
-                                                <a
-                                                    href={resource.fileUrl || resource.downloadUrl}
-                                                    download={resource.fileName}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                                                >
-                                                    <Download className="w-4 h-4" />
-                                                    <span>Descargar PDF</span>
-                                                </a>
-                                            </div>
-                                            <iframe
-                                                src={`${resource.fileUrl || resource.downloadUrl}#toolbar=1&navpanes=0&scrollbar=1`}
-                                                className="w-full h-[700px]"
-                                                title={resource.fileName}
-                                            />
-                                        </div>
-                                    ))}
-                                </>
-                            )}
+                            {/* RECURSOS */}
+                            <LessonResources resources={resources} lessonType={lesson.type} />
 
                             {/* CONTENIDO MARKDOWN */}
                             {lesson.type === 'TEXT' && lesson.markdownContent && !lesson.videoUrl && (
-                                <div className="bg-white rounded-lg p-8">
+                                <div className="bg-white rounded-2xl p-8 shadow-xl">
                                     <div className="prose prose-lg max-w-none text-gray-900">
                                         <div dangerouslySetInnerHTML={{ __html: lesson.markdownContent }} />
                                     </div>
@@ -508,62 +408,34 @@ export default function LessonPlayerPage() {
 
                             {/* MENSAJE SI NO HAY CONTENIDO */}
                             {lesson.type === 'TEXT' && !lesson.videoUrl && resources.length === 0 && !lesson.markdownContent && (
-                                <div className="bg-gray-800 rounded-lg p-12 text-center">
-                                    <FileText className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                                    <h3 className="text-lg font-semibold text-gray-300 mb-2">
+                                <div className="bg-[#001F3F]/30 backdrop-blur-sm rounded-2xl p-12 text-center border border-white/10">
+                                    <FileText className="w-16 h-16 text-white/20 mx-auto mb-4" strokeWidth={1.5} />
+                                    <h3 className="text-lg font-semibold text-white/80 mb-2">
                                         Sin contenido disponible
                                     </h3>
-                                    <p className="text-gray-500">
+                                    <p className="text-white/50">
                                         Esta lección no tiene contenido cargado aún
                                     </p>
                                 </div>
                             )}
 
                             {/* BOTÓN COMPLETAR Y CONTINUAR */}
-                            <div className="bg-gray-800 rounded-lg p-6">
-                                <button
-                                    onClick={handleCompleteAndContinue}
-                                    disabled={markLessonCompleteMutation.isPending}
-                                    className={`w-full font-semibold py-4 px-6 rounded-lg 
-                                             transition-colors flex items-center justify-center space-x-2
-                                             disabled:cursor-not-allowed ${
-                                        progress.isCompleted
-                                            ? 'bg-green-600 hover:bg-green-700 disabled:bg-green-400'
-                                            : 'bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400'
-                                    } text-white`}
-                                >
-                                    {markLessonCompleteMutation.isPending ? (
-                                        <>
-                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                            <span>Procesando...</span>
-                                        </>
-                                    ) : progress.isCompleted ? (
-                                        <>
-                                            <CheckCircle className="w-5 h-5" />
-                                            <span>
-                                                {navigation.nextItem
-                                                    ? navigation.nextItem.type === 'quiz'
-                                                        ? 'Ir a evaluación del módulo'
-                                                        : 'Ir a siguiente lección'
-                                                    : 'Volver al curso'}
-                                            </span>
-                                            <ChevronRight className="w-5 h-5" />
-                                        </>
-                                    ) : (
-                                        <>
-                                            <CheckCircle className="w-5 h-5" />
-                                            <span>Marcar como completada y continuar</span>
-                                            <ChevronRight className="w-5 h-5" />
-                                        </>
-                                    )}
-                                </button>
-                            </div>
+                            <CompleteButton
+                                isCompleted={progress.isCompleted}
+                                isPending={markLessonCompleteMutation.isPending}
+                                hasNextItem={!!navigation.nextItem}
+                                nextItemType={navigation.nextItem?.type}
+                                onComplete={handleCompleteAndContinue}
+                            />
 
-                            {/* Descripción de la lección */}
+                            {/* DESCRIPCIÓN DE LA LECCIÓN */}
                             {lesson.description && (
-                                <div className="bg-gray-800 rounded-lg p-6">
-                                    <h2 className="text-xl font-bold mb-4">Descripción</h2>
-                                    <p className="text-gray-300 leading-relaxed">{lesson.description}</p>
+                                <div className="bg-[#001F3F]/30 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+                                    <h2 className="text-lg font-bold mb-3 text-white flex items-center gap-2">
+                                        <BookOpen className="w-5 h-5 text-[#00B4D8]" strokeWidth={2} />
+                                        <span>Descripción</span>
+                                    </h2>
+                                    <p className="text-white/70 leading-relaxed">{lesson.description}</p>
                                 </div>
                             )}
                         </div>
@@ -571,9 +443,10 @@ export default function LessonPlayerPage() {
                 </div>
 
                 {/* Sidebar de navegación - Fixed width en desktop */}
-                <div className="hidden lg:block w-96 border-l border-gray-700 flex-shrink-0 overflow-hidden">
+                <div className="hidden lg:block w-96 border-l border-white/5 flex-shrink-0 overflow-hidden">
                     <LessonSidebar
                         courseId={courseId}
+                        courseTitle={course.title}
                         currentLessonId={lessonId}
                         modules={modules}
                         progress={courseProgress}

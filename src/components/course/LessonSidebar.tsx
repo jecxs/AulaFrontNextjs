@@ -1,82 +1,44 @@
-// src/components/course/LessonSidebar.tsx (FIXED - Con soporte para Quizzes)
+// src/components/course/LessonSidebar.tsx
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import Link from 'next/link';
 import {
+    ChevronDown,
     CheckCircle,
-    Circle,
     PlayCircle,
     FileText,
-    ChevronDown,
-    ChevronRight,
-    Award
+    BookOpen,
+    Circle,
+    Lock,
 } from 'lucide-react';
 import { ROUTES } from '@/lib/utils/constants';
 
 interface LessonSidebarProps {
     courseId: string;
+    courseTitle?: string;
     currentLessonId: string;
-    modules: Array<{
-        id: string;
-        title: string;
-        order: number;
-        lessons: Array<{
-            id: string;
-            title: string;
-            type: 'VIDEO' | 'TEXT';
-            order: number;
-            durationSec?: number;
-        }>;
-        quizzes?: Array<{
-            id: string;
-            title: string;
-            passingScore?: number;
-        }>;
-    }>;
+    modules: any[];
     progress: {
-        completedLessons: string[]; // Array de IDs de lecciones completadas
-        completedQuizzes: string[]; // Array de IDs de quizzes completados (con al menos un intento aprobado)
-        quizAttempts?: Record<string, {
-            passed: boolean;
-            bestScore: number;
-            totalAttempts: number;
-        }>; // Información detallada de intentos por quizId
+        completedLessons: string[];
+        completedQuizzes: string[];
+        quizAttempts: Record<string, any>;
     };
 }
 
 export default function LessonSidebar({
                                           courseId,
+                                          courseTitle,
                                           currentLessonId,
                                           modules,
-                                          progress
+                                          progress,
                                       }: LessonSidebarProps) {
-    const router = useRouter();
-    const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
-    const currentLessonRef = useRef<HTMLDivElement>(null);
-
-    // Auto-expandir el módulo actual al cargar
-    useEffect(() => {
-        const currentModule = modules.find(m =>
-            m.lessons.some(l => l.id === currentLessonId)
-        );
-        if (currentModule) {
-            setExpandedModules(new Set([currentModule.id]));
-        }
-    }, [currentLessonId, modules]);
-
-    // Auto-scroll hacia la lección actual
-    useEffect(() => {
-        if (currentLessonRef.current) {
-            currentLessonRef.current.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center'
-            });
-        }
-    }, [currentLessonId]);
+    const [expandedModules, setExpandedModules] = useState<Set<string>>(
+        new Set(modules.map((m) => m.id))
+    );
 
     const toggleModule = (moduleId: string) => {
-        setExpandedModules(prev => {
+        setExpandedModules((prev) => {
             const newSet = new Set(prev);
             if (newSet.has(moduleId)) {
                 newSet.delete(moduleId);
@@ -87,284 +49,186 @@ export default function LessonSidebar({
         });
     };
 
-    const navigateToLesson = (lessonId: string) => {
-        router.push(`${ROUTES.STUDENT.COURSES}/${courseId}/lessons/${lessonId}`);
-    };
+    const getLessonIcon = (lesson: any) => {
+        const isCompleted = progress.completedLessons.includes(lesson.id);
 
-    const navigateToQuiz = (quizId: string) => {
-        // Si el quiz ya fue completado (tiene al menos un intento aprobado), ir a resultados
-        const quizAttempt = progress.quizAttempts?.[quizId];
-
-        if (quizAttempt && quizAttempt.passed) {
-            // Ya tiene un intento aprobado, ir a resultados
-            router.push(`${ROUTES.STUDENT.COURSES}/${courseId}/quizzes/${quizId}/results`);
-        } else {
-            // No ha aprobado o no tiene intentos, ir a realizar el quiz
-            router.push(`${ROUTES.STUDENT.COURSES}/${courseId}/quizzes/${quizId}`);
-        }
-    };
-
-    const isLessonCompleted = (lessonId: string) => {
-        return progress.completedLessons.includes(lessonId);
-    };
-
-    const isQuizCompleted = (quizId: string) => {
-        // Un quiz está completado si tiene al menos un intento aprobado
-        return progress.completedQuizzes?.includes(quizId) || false;
-    };
-
-    const getQuizStatus = (quizId: string) => {
-        const quizAttempt = progress.quizAttempts?.[quizId];
-
-        if (!quizAttempt || quizAttempt.totalAttempts === 0) {
-            return { status: 'pending', text: 'Sin intentos' };
+        if (isCompleted) {
+            return <CheckCircle className="w-4 h-4 text-emerald-500" strokeWidth={2} />;
         }
 
-        if (quizAttempt.passed) {
-            return {
-                status: 'passed',
-                text: `Aprobado (${quizAttempt.bestScore}%)`
-            };
+        switch (lesson.type) {
+            case 'VIDEO':
+                return <PlayCircle className="w-4 h-4 text-[#00B4D8]" strokeWidth={2} />;
+            case 'TEXT':
+                return <FileText className="w-4 h-4 text-gray-500" strokeWidth={2} />;
+            default:
+                return <BookOpen className="w-4 h-4 text-gray-500" strokeWidth={2} />;
         }
-
-        return {
-            status: 'failed',
-            text: `${quizAttempt.totalAttempts} ${quizAttempt.totalAttempts === 1 ? 'intento' : 'intentos'}`
-        };
     };
 
     const getModuleProgress = (module: any) => {
-        const totalItems = module.lessons.length + (module.quizzes?.length || 0);
-        const completedLessons = module.lessons.filter((l: any) =>
-            isLessonCompleted(l.id)
-        ).length;
-        const completedQuizzes = module.quizzes?.filter((q: any) =>
-            isQuizCompleted(q.id)
-        ).length || 0;
-        const completed = completedLessons + completedQuizzes;
-        return { completed, total: totalItems, percentage: Math.round((completed / totalItems) * 100) };
-    };
+        if (!module.lessons || module.lessons.length === 0) return 0;
 
-    const formatDuration = (seconds: number) => {
-        const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = seconds % 60;
-        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+        const completedCount = module.lessons.filter((lesson: any) =>
+            progress.completedLessons.includes(lesson.id)
+        ).length;
+
+        return Math.round((completedCount / module.lessons.length) * 100);
     };
 
     return (
-        <div className="h-full flex flex-col bg-gray-800">
-            {/* Header */}
-            <div className="p-4 border-b border-gray-700">
-                <h3 className="font-semibold text-white mb-1">Contenido del curso</h3>
-                <p className="text-xs text-gray-400">
-                    {progress.completedLessons.length} de{' '}
-                    {modules.reduce((acc, m) => acc + m.lessons.length, 0)} lecciones completadas
-                </p>
-                {progress.completedQuizzes && progress.completedQuizzes.length > 0 && (
-                    <p className="text-xs text-gray-400">
-                        {progress.completedQuizzes.length} de{' '}
-                        {modules.reduce((acc, m) => acc + (m.quizzes?.length || 0), 0)} evaluaciones aprobadas
-                    </p>
+        <div className="h-full bg-[#001F3F] flex flex-col">
+            {/* Header del sidebar */}
+            <div className="p-5 border-b border-white/10">
+                {courseTitle && (
+                    <div className="mb-4">
+                        <p className="text-xs text-white/50 font-medium mb-1 uppercase tracking-wide">
+                            Curso
+                        </p>
+                        <h2 className="text-base font-bold text-white leading-snug">
+                            {courseTitle}
+                        </h2>
+                    </div>
                 )}
+                <div className="flex items-center gap-2">
+                    <div className="w-1 h-5 bg-[#00B4D8] rounded-full" />
+                    <h3 className="text-sm font-bold text-white uppercase tracking-wide">
+                        Contenido del curso
+                    </h3>
+                </div>
             </div>
 
-            {/* Scrollable Content */}
+            {/* Lista de módulos scrollable */}
             <div className="flex-1 overflow-y-auto custom-scrollbar">
-                <div className="p-4 space-y-2">
+                <div className="p-3 space-y-2">
                     {modules.map((module, moduleIndex) => {
-                        const isExpanded = expandedModules.has(module.id);
                         const moduleProgress = getModuleProgress(module);
-                        const isModuleComplete = moduleProgress.percentage === 100;
+                        const isExpanded = expandedModules.has(module.id);
 
                         return (
-                            <div key={module.id} className="space-y-1">
-                                {/* Module Header */}
+                            <div key={module.id} className="group/module">
+                                {/* Header del módulo */}
                                 <button
                                     onClick={() => toggleModule(module.id)}
-                                    className="w-full flex items-center justify-between p-3 bg-gray-700/50 hover:bg-gray-700 rounded-lg transition-colors group"
+                                    className="w-full flex items-start gap-3 p-3 hover:bg-white/5 rounded-lg transition-colors text-left"
                                 >
-                                    <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                        <div className="flex-shrink-0">
-                                            {isExpanded ? (
-                                                <ChevronDown className="w-4 h-4 text-gray-400" />
+                                    {/* Indicador de completado/número */}
+                                    <div className="flex-shrink-0 mt-0.5">
+                                        <div
+                                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                                                moduleProgress === 100
+                                                    ? 'bg-emerald-500/20 border border-emerald-500/30'
+                                                    : 'bg-white/5 border border-white/10'
+                                            }`}
+                                        >
+                                            {moduleProgress === 100 ? (
+                                                <CheckCircle className="w-4 h-4 text-emerald-400" strokeWidth={2} />
                                             ) : (
-                                                <ChevronRight className="w-4 h-4 text-gray-400" />
+                                                <span className="text-xs font-bold text-white/80">
+                                                    {moduleIndex + 1}
+                                                </span>
                                             )}
                                         </div>
-                                        <div className="flex-1 min-w-0 text-left">
-                                            <div className="flex items-center space-x-2">
-                                                <span className="text-xs font-medium text-gray-400">
-                                                    Módulo {moduleIndex + 1}
-                                                </span>
-                                                {isModuleComplete && (
-                                                    <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
-                                                )}
-                                            </div>
-                                            <p className="text-sm font-medium text-white truncate">
-                                                {module.title}
-                                            </p>
+                                    </div>
+
+                                    {/* Información del módulo */}
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="text-sm font-semibold text-white mb-1 leading-snug group-hover/module:text-[#00B4D8] transition-colors">
+                                            {module.title}
+                                        </h4>
+                                        <div className="flex items-center gap-2 text-xs text-white/50">
+                                            <span>
+                                                {module.lessons?.length || 0}{' '}
+                                                {module.lessons?.length === 1 ? 'lección' : 'lecciones'}
+                                            </span>
+                                            {moduleProgress > 0 && (
+                                                <>
+                                                    <span>•</span>
+                                                    <span className="text-[#00B4D8] font-medium">
+                                                        {moduleProgress}%
+                                                    </span>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
-                                    <div className="flex-shrink-0 ml-2">
-                                        <span className="text-xs text-gray-400">
-                                            {moduleProgress.completed}/{moduleProgress.total}
-                                        </span>
-                                    </div>
+
+                                    {/* Icono de expansión */}
+                                    <ChevronDown
+                                        className={`w-4 h-4 text-white/40 transition-transform flex-shrink-0 mt-1 ${
+                                            isExpanded ? 'rotate-180' : ''
+                                        }`}
+                                        strokeWidth={2}
+                                    />
                                 </button>
 
-                                {/* Module Progress Bar */}
-                                {isExpanded && (
-                                    <div className="px-3 pb-2">
-                                        <div className="h-1 bg-gray-700 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-blue-500 transition-all duration-300"
-                                                style={{ width: `${moduleProgress.percentage}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Lessons & Quizzes */}
-                                {isExpanded && (
-                                    <div className="ml-6 space-y-1 relative">
-                                        {/* Vertical Progress Line */}
-                                        <div className="absolute left-[9px] top-0 bottom-0 w-0.5 bg-gray-700" />
-
-                                        {/* Lessons */}
-                                        {module.lessons.map((lesson, lessonIndex) => {
-                                            const isCompleted = isLessonCompleted(lesson.id);
+                                {/* Lecciones */}
+                                {isExpanded && module.lessons && module.lessons.length > 0 && (
+                                    <div className="mt-1 ml-11 mr-2 space-y-0.5">
+                                        {module.lessons.map((lesson: any) => {
+                                            const isCompleted = progress.completedLessons.includes(lesson.id);
                                             const isCurrent = lesson.id === currentLessonId;
 
                                             return (
-                                                <div
+                                                <Link
                                                     key={lesson.id}
-                                                    ref={isCurrent ? currentLessonRef : null}
-                                                    className="relative"
+                                                    href={`${ROUTES.STUDENT.COURSES}/${courseId}/lessons/${lesson.id}`}
+                                                    className={`flex items-center gap-2.5 p-2.5 rounded-lg transition-all group/lesson ${
+                                                        isCurrent
+                                                            ? 'bg-[#00B4D8]/15 border border-[#00B4D8]/30'
+                                                            : 'hover:bg-white/5 border border-transparent'
+                                                    }`}
                                                 >
-                                                    {/* Progress Dot */}
-                                                    <div className="absolute left-0 top-3 -translate-x-[5px] z-10">
-                                                        {isCompleted ? (
-                                                            <CheckCircle className="w-5 h-5 text-green-400 bg-gray-800 rounded-full" />
-                                                        ) : isCurrent ? (
-                                                            <Circle className="w-5 h-5 text-blue-400 bg-gray-800 rounded-full fill-blue-400" />
-                                                        ) : (
-                                                            <Circle className="w-5 h-5 text-gray-600 bg-gray-800 rounded-full" />
-                                                        )}
+                                                    <div className="flex-shrink-0">
+                                                        {getLessonIcon(lesson)}
                                                     </div>
-
-                                                    {/* Lesson Button */}
-                                                    <button
-                                                        onClick={() => navigateToLesson(lesson.id)}
-                                                        className={`w-full text-left pl-6 pr-3 py-2.5 rounded-lg transition-all ${
+                                                    <p
+                                                        className={`text-sm flex-1 min-w-0 leading-snug transition-colors ${
                                                             isCurrent
-                                                                ? 'bg-blue-600/20 border border-blue-500/50'
+                                                                ? 'text-[#00B4D8] font-medium'
                                                                 : isCompleted
-                                                                    ? 'hover:bg-gray-700/50'
-                                                                    : 'hover:bg-gray-700/30'
+                                                                    ? 'text-white/60 group-hover/lesson:text-white/80'
+                                                                    : 'text-white/80 group-hover/lesson:text-white'
                                                         }`}
                                                     >
-                                                        <div className="flex items-start justify-between">
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="flex items-center space-x-2 mb-1">
-                                                                    {lesson.type === 'VIDEO' ? (
-                                                                        <PlayCircle className={`w-4 h-4 flex-shrink-0 ${
-                                                                            isCurrent ? 'text-blue-400' : 'text-gray-400'
-                                                                        }`} />
-                                                                    ) : (
-                                                                        <FileText className={`w-4 h-4 flex-shrink-0 ${
-                                                                            isCurrent ? 'text-blue-400' : 'text-gray-400'
-                                                                        }`} />
-                                                                    )}
-                                                                    <span className={`text-xs font-medium ${
-                                                                        isCurrent ? 'text-blue-400' : 'text-gray-500'
-                                                                    }`}>
-                                                                        Lección {lessonIndex + 1}
-                                                                    </span>
-                                                                </div>
-                                                                <p className={`text-sm ${
-                                                                    isCurrent
-                                                                        ? 'text-white font-medium'
-                                                                        : isCompleted
-                                                                            ? 'text-gray-300'
-                                                                            : 'text-gray-400'
-                                                                }`}>
-                                                                    {lesson.title}
-                                                                </p>
-                                                                {lesson.durationSec && (
-                                                                    <p className="text-xs text-gray-500 mt-1">
-                                                                        {formatDuration(lesson.durationSec)}
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                            {isCompleted && !isCurrent && (
-                                                                <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0 ml-2" />
-                                                            )}
-                                                        </div>
-                                                    </button>
-                                                </div>
+                                                        {lesson.title}
+                                                    </p>
+                                                </Link>
                                             );
                                         })}
+                                    </div>
+                                )}
 
-                                        {/* Quizzes */}
-                                        {module.quizzes && module.quizzes.length > 0 && module.quizzes.map((quiz) => {
-                                            const isCompleted = isQuizCompleted(quiz.id);
-                                            const quizStatus = getQuizStatus(quiz.id);
+                                {/* Quizzes */}
+                                {isExpanded && module.quizzes && module.quizzes.length > 0 && (
+                                    <div className="mt-2 ml-11 mr-2 pt-2 border-t border-white/5 space-y-0.5">
+                                        {module.quizzes.map((quiz: any) => {
+                                            const isCompleted = progress.completedQuizzes.includes(quiz.id);
+                                            const attemptInfo = progress.quizAttempts[quiz.id];
 
                                             return (
-                                                <div key={quiz.id} className="relative">
-                                                    {/* Progress Dot */}
-                                                    <div className="absolute left-0 top-3 -translate-x-[5px] z-10">
+                                                <Link
+                                                    key={quiz.id}
+                                                    href={`${ROUTES.STUDENT.COURSES}/${courseId}/quizzes/${quiz.id}`}
+                                                    className="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-white/5 transition-all group/quiz border border-transparent"
+                                                >
+                                                    <div className="flex-shrink-0">
                                                         {isCompleted ? (
-                                                            <CheckCircle className="w-5 h-5 text-green-400 bg-gray-800 rounded-full" />
+                                                            <CheckCircle className="w-4 h-4 text-emerald-500" strokeWidth={2} />
                                                         ) : (
-                                                            <Circle className="w-5 h-5 text-purple-400 bg-gray-800 rounded-full" />
+                                                            <FileText className="w-4 h-4 text-[#00B4D8]" strokeWidth={2} />
                                                         )}
                                                     </div>
-
-                                                    {/* Quiz Button */}
-                                                    <button
-                                                        onClick={() => navigateToQuiz(quiz.id)}
-                                                        className={`w-full text-left pl-6 pr-3 py-2.5 rounded-lg transition-all ${
-                                                            isCompleted
-                                                                ? 'bg-green-900/20 border border-green-500/30 hover:bg-green-900/30'
-                                                                : quizStatus.status === 'failed'
-                                                                    ? 'bg-orange-900/20 border border-orange-500/30 hover:bg-orange-900/30'
-                                                                    : 'bg-purple-900/20 border border-purple-500/30 hover:bg-purple-900/40'
-                                                        }`}
-                                                    >
-                                                        <div className="flex items-start justify-between">
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="flex items-center space-x-2 mb-1">
-                                                                    <Award className={`w-4 h-4 flex-shrink-0 ${
-                                                                        isCompleted
-                                                                            ? 'text-green-400'
-                                                                            : quizStatus.status === 'failed'
-                                                                                ? 'text-orange-400'
-                                                                                : 'text-purple-400'
-                                                                    }`} />
-                                                                    <span className={`text-xs font-medium ${
-                                                                        isCompleted
-                                                                            ? 'text-green-400'
-                                                                            : quizStatus.status === 'failed'
-                                                                                ? 'text-orange-400'
-                                                                                : 'text-purple-400'
-                                                                    }`}>
-                                                                        Evaluación
-                                                                    </span>
-                                                                </div>
-                                                                <p className="text-sm text-gray-300 mb-1">
-                                                                    {quiz.title}
-                                                                </p>
-                                                                <p className="text-xs text-gray-500">
-                                                                    {quizStatus.text}
-                                                                </p>
-                                                            </div>
-                                                            {isCompleted && (
-                                                                <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0 ml-2" />
-                                                            )}
-                                                        </div>
-                                                    </button>
-                                                </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm text-white/80 group-hover/quiz:text-white leading-snug">
+                                                            {quiz.title}
+                                                        </p>
+                                                        {attemptInfo && attemptInfo.totalAttempts > 0 && (
+                                                            <p className="text-xs text-white/40 mt-0.5">
+                                                                Mejor: {attemptInfo.bestScore}%
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </Link>
                                             );
                                         })}
                                     </div>
@@ -375,20 +239,21 @@ export default function LessonSidebar({
                 </div>
             </div>
 
-            {/* Custom Scrollbar Styles */}
+            {/* Custom scrollbar styles */}
             <style jsx>{`
                 .custom-scrollbar::-webkit-scrollbar {
                     width: 6px;
                 }
                 .custom-scrollbar::-webkit-scrollbar-track {
-                    background: #1f2937;
+                    background: rgba(255, 255, 255, 0.03);
+                    border-radius: 3px;
                 }
                 .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: #4b5563;
+                    background: rgba(255, 255, 255, 0.1);
                     border-radius: 3px;
                 }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: #6b7280;
+                    background: rgba(255, 255, 255, 0.15);
                 }
             `}</style>
         </div>
