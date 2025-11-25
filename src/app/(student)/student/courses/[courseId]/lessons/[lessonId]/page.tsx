@@ -92,7 +92,6 @@ export default function LessonPlayerPage() {
 
             // Cargar datos de la lección
             const lesson = await coursesApi.getLesson(lessonId);
-            console.log('📚 Lesson data:', lesson);
 
             const course = await coursesApi.getCourse(courseId);
 
@@ -181,8 +180,6 @@ export default function LessonPlayerPage() {
                     }
                 })
             );
-
-            console.log('📊 Course Progress:', courseProgress);
 
             // Cargar quizzes del módulo actual
             let moduleQuizzes: any[] = [];
@@ -384,10 +381,8 @@ export default function LessonPlayerPage() {
                                 <VideoPlayer
                                     src={lesson.videoUrl}
                                     onTimeUpdate={(time) => {
-                                        console.log('Video progress:', time);
                                     }}
                                     onEnded={() => {
-                                        console.log('Video ended');
                                         toast.success('¡Video completado! 🎉');
                                     }}
                                     className="w-full rounded-2xl overflow-hidden shadow-2xl"

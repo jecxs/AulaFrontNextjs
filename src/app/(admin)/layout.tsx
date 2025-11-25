@@ -18,7 +18,6 @@ const adminNavigation = [
     { name: 'Clases en Vivo', href: '/admin/live-sessions', icon: Video },
     { name: 'Usuarios', href: ROUTES.ADMIN.USERS, icon: Users },
     { name: 'Inscripciones', href: ROUTES.ADMIN.ENROLLMENTS, icon: UserCheck },
-    { name: 'Configuración', href: '/admin/settings', icon: Settings },
 ];
 
 export default function AdminLayout({

@@ -43,42 +43,21 @@ export function AuthGuard({
     useEffect(() => {
         if (isLoading) return;
 
-        console.log('🛡️ AuthGuard - Checking access:', {
-            isLoading,
-            isAuthenticated,
-            user: user ? {
-                id: user.id,
-                email: user.email,
-                roles: user.roles
-            } : null,
-            requiredRoles: roles
-        });
-
         if (requireAuth && !isAuthenticated) {
-            console.log('❌ AuthGuard - Not authenticated, redirecting to:', redirectTo);
             router.push(redirectTo);
             return;
         }
 
         if (roles.length > 0 && user) {
-            // ✅ CORREGIDO: Usar función helper robusta
             const userRoles = extractUserRoles(user);
             const hasRequiredRole = roles.some(role => userRoles.includes(role));
 
-            console.log('🔍 AuthGuard - Role check:', {
-                userRoles,
-                requiredRoles: roles,
-                hasRequiredRole
-            });
-
             if (!hasRequiredRole) {
-                console.log('❌ AuthGuard - Insufficient permissions, redirecting to unauthorized');
                 router.push(ROUTES.UNAUTHORIZED);
                 return;
             }
         }
 
-        console.log('✅ AuthGuard - Access granted');
     }, [isAuthenticated, isLoading, user, router, requireAuth, redirectTo, roles]);
 
     if (isLoading) {
@@ -97,7 +76,6 @@ export function AuthGuard({
     }
 
     if (roles.length > 0 && user) {
-        // ✅ CORREGIDO: Usar función helper robusta
         const userRoles = extractUserRoles(user);
         const hasRequiredRole = roles.some(role => userRoles.includes(role));
 

@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useEnrollments } from '@/hooks/use-enrollments';
 import CreateEnrollmentModal from '@/components/admin/CreateEnrollmentModal';
+import EditEnrollmentModal from '@/components/admin/EditEnrollmentModal';
 import {
     EnrollmentStatus,
     EnrollmentWithProgress,
@@ -21,6 +22,7 @@ import {
     Calendar,
     User,
     BookOpen,
+    Edit,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import LoadingSpinner from '@/components/ui/loading-spinner';
@@ -46,6 +48,8 @@ export default function AdminEnrollmentsPage() {
     const [statusFilter, setStatusFilter] = useState<EnrollmentStatus | ''>('');
     const [paymentFilter, setPaymentFilter] = useState<'all' | 'confirmed' | 'pending'>('all');
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [selectedEnrollment, setSelectedEnrollment] = useState<EnrollmentWithProgress | null>(null);
     const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
     // Cargar enrollments
@@ -89,6 +93,12 @@ export default function AdminEnrollmentsPage() {
 
         return () => clearTimeout(timer);
     }, [searchQuery]);
+
+    const handleEdit = (enrollment: EnrollmentWithProgress) => {
+        setSelectedEnrollment(enrollment);
+        setShowEditModal(true);
+        setActiveDropdown(null);
+    };
 
     const handleSuspend = async (enrollmentId: string) => {
         if (!confirm('¿Estás seguro de que deseas suspender este enrollment?')) {
@@ -333,10 +343,10 @@ export default function AdminEnrollmentsPage() {
                                                                 style={{
                                                                     width: `${Math.max(0, Math.min(100, enrollment.progress?.completionPercentage || 0))}%`,
                                                                 }}
-                                                            /> 
+                                                            />
                                                         </div>
                                                         <p className="text-xs text-gray-500 mt-1">
-                                                            {enrollment.progress 
+                                                            {enrollment.progress
                                                                 ? `${Math.max(0, Math.min(100, enrollment.progress.completionPercentage)).toFixed(1)}% completado`
                                                                 : '0% completado'}
                                                         </p>
@@ -391,6 +401,13 @@ export default function AdminEnrollmentsPage() {
                                             {activeDropdown === enrollment.id && (
                                                 <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
                                                     <div className="py-1">
+                                                        <button
+                                                            onClick={() => handleEdit(enrollment)}
+                                                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                                        >
+                                                            <Edit className="inline h-4 w-4 mr-2" />
+                                                            Editar
+                                                        </button>
                                                         {enrollment.status === EnrollmentStatus.ACTIVE ? (
                                                             <button
                                                                 onClick={() => handleSuspend(enrollment.id)}
@@ -506,6 +523,19 @@ export default function AdminEnrollmentsPage() {
                 onClose={() => setShowCreateModal(false)}
                 onSuccess={fetchEnrollments}
             />
+
+            {/* Modal de Edición */}
+            {selectedEnrollment && (
+                <EditEnrollmentModal
+                    isOpen={showEditModal}
+                    onClose={() => {
+                        setShowEditModal(false);
+                        setSelectedEnrollment(null);
+                    }}
+                    onSuccess={fetchEnrollments}
+                    enrollment={selectedEnrollment}
+                />
+            )}
         </div>
     );
 }

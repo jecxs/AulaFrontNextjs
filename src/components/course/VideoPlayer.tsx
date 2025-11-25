@@ -67,10 +67,6 @@ export default function VideoPlayer({
         const handleLoadedMetadata = () => {
             setDuration(video.duration);
             setIsLoading(false);
-            console.log('✅ Video loaded:', {
-                duration: video.duration,
-                dimensions: `${video.videoWidth}x${video.videoHeight}`
-            });
         };
 
         const handleTimeUpdate = () => {
@@ -84,7 +80,6 @@ export default function VideoPlayer({
         };
 
         const handleError = (e: Event) => {
-            console.error('❌ Video error:', video.error);
             setError('Error al cargar el video. Por favor, intenta recargar la página.');
             setIsLoading(false);
         };
