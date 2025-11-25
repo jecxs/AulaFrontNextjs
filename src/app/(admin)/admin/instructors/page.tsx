@@ -1,7 +1,7 @@
 // src/app/(admin)/admin/instructors/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useInstructorsAdmin } from '@/hooks/use-instructors-admin';
 import { InstructorList } from '@/types/instructor';
 import InstructorModal from '@/components/admin/instructors/InstructorModal';
@@ -31,13 +31,11 @@ export default function AdminInstructorsPage() {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [showModal, setShowModal] = useState(false);
-    const [selectedInstructor, setSelectedInstructor] = useState<InstructorList | null>(
-        null
-    );
+    const [selectedInstructor, setSelectedInstructor] = useState<InstructorList | null>(null);
     const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
-    // Cargar instructores
-    const fetchInstructors = async () => {
+    //  OPTIMIZACIÓN: Memoizar fetchInstructors
+    const fetchInstructors = useCallback(async () => {
         try {
             const params: any = {
                 page: pagination.page,
@@ -52,26 +50,29 @@ export default function AdminInstructorsPage() {
             console.error('Error al cargar instructores:', error);
             toast.error('Error al cargar los instructores');
         }
-    };
+    }, [pagination.page, pagination.limit, searchQuery, getInstructors]);
 
+    //  Cargar instructores cuando cambia la página
     useEffect(() => {
         fetchInstructors();
-    }, [pagination.page]);
+    }, [fetchInstructors]);
 
-    // Búsqueda con debounce
+    //  OPTIMIZACIÓN: Búsqueda con debounce mejorado
     useEffect(() => {
         const timer = setTimeout(() => {
             if (pagination.page === 1) {
                 fetchInstructors();
             } else {
-                setPagination({ ...pagination, page: 1 });
+                setPagination(prev => ({ ...prev, page: 1 }));
             }
         }, 500);
 
         return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchQuery]);
 
-    const handleDelete = async (instructorId: string) => {
+    // OPTIMIZACIÓN: Memoizar handlers
+    const handleDelete = useCallback(async (instructorId: string) => {
         if (
             !confirm(
                 '¿Estás seguro de que deseas eliminar este instructor? Debe no tener cursos asignados.'
@@ -86,135 +87,124 @@ export default function AdminInstructorsPage() {
         } catch (error) {
             console.error('Error al eliminar instructor:', error);
         }
-    };
+        setActiveDropdown(null);
+    }, [deleteInstructor, fetchInstructors]);
 
-    const handleEdit = (instructor: InstructorList) => {
+    const handleEdit = useCallback((instructor: InstructorList) => {
         setSelectedInstructor(instructor);
         setShowModal(true);
-        setActiveDropdown(null); // Cerrar dropdown al editar
-    };
+        setActiveDropdown(null);
+    }, []);
 
-    const handleCloseModal = () => {
+    const handleCloseModal = useCallback(() => {
         setShowModal(false);
         setSelectedInstructor(null);
-    };
+    }, []);
 
-    const handleSuccess = () => {
+    const handleSuccess = useCallback(() => {
         handleCloseModal();
         fetchInstructors();
-    };
-
-    if (isLoading && instructors.length === 0) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <LoadingSpinner size="sm" />
-            </div>
-        );
-    }
+    }, [handleCloseModal, fetchInstructors]);
 
     return (
-        <div className="space-y-6">
+        <div className="max-w-[1600px] mx-auto space-y-6">
             {/* Header */}
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Instructores</h1>
-                        <p className="text-gray-600 mt-1">
-                            Gestiona los instructores de la plataforma
+                        <h1 className="text-2xl font-bold text-[#001F3F] flex items-center gap-3">
+                            <div className="p-2 bg-gradient-to-br from-[#00B4D8]/20 to-[#001F3F]/10 rounded-xl">
+                                <UserCheck className="h-6 w-6 text-[#00B4D8]" />
+                            </div>
+                            Gestión de Instructores
+                        </h1>
+                        <p className="text-sm text-gray-600 mt-1">
+                            {pagination.total} instructor{pagination.total !== 1 ? 'es' : ''} registrado
+                            {pagination.total !== 1 ? 's' : ''}
                         </p>
                     </div>
                     <button
                         onClick={() => setShowModal(true)}
-                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                        className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#00B4D8] to-[#0096C7] text-white rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-300 font-medium"
                     >
-                        <Plus className="h-5 w-5 mr-2" />
-                        Nuevo Instructor
+                        <Plus className="h-5 w-5" />
+                        Agregar Instructor
                     </button>
                 </div>
             </div>
 
             {/* Búsqueda */}
-            <div className="bg-white rounded-lg shadow p-4">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Buscar instructores por nombre, email o especialización..."
+                        placeholder="Buscar instructores por nombre o email..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        className="pl-11 w-full h-11 rounded-lg border border-gray-200 shadow-sm focus:border-[#00B4D8] focus:ring-2 focus:ring-[#00B4D8]/20 transition-all"
                     />
                 </div>
             </div>
 
             {/* Lista de instructores */}
-            {instructors.length === 0 ? (
-                <div className="bg-white rounded-lg shadow p-12 text-center">
-                    <UserCheck className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">
-                        {searchQuery
-                            ? 'No se encontraron instructores'
-                            : 'No hay instructores registrados'}
-                    </h3>
-                    <p className="mt-1 text-sm text-gray-500">
-                        {searchQuery
-                            ? 'Intenta con otros términos de búsqueda'
-                            : 'Comienza creando un nuevo instructor'}
-                    </p>
+            {isLoading ? (
+                <div className="flex justify-center items-center py-20">
+                    <LoadingSpinner size="lg" />
                 </div>
             ) : (
                 <>
-                    {/* CAMBIO CRÍTICO: Eliminé overflow-hidden del contenedor */}
-                    <div className="bg-white shadow sm:rounded-lg">
-                        <ul className="divide-y divide-gray-200">
-                            {instructors.map((instructor) => (
-                                <li key={instructor.id} className="hover:bg-gray-50">
-                                    <div className="px-4 py-4 sm:px-6">
+                    {instructors.length === 0 ? (
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+                            <UserCheck className="mx-auto h-12 w-12 text-gray-400" />
+                            <h3 className="mt-4 text-lg font-medium text-gray-900">
+                                No se encontraron instructores
+                            </h3>
+                            <p className="mt-2 text-sm text-gray-500">
+                                {searchQuery
+                                    ? 'Intenta con otros términos de búsqueda'
+                                    : 'Comienza agregando tu primer instructor'}
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div className="divide-y divide-gray-100">
+                                {instructors.map((instructor) => (
+                                    <div
+                                        key={instructor.id}
+                                        className="p-6 hover:bg-gray-50/50 transition-colors"
+                                    >
                                         <div className="flex items-center justify-between">
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center space-x-4">
-                                                    {/* Avatar */}
-                                                    <div className="flex-shrink-0">
-                                                        <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                                                            <span className="text-blue-600 font-medium text-lg">
-                                                                {instructor.firstName[0]}
-                                                                {instructor.lastName[0]}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Info del instructor */}
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-sm font-medium text-gray-900 truncate">
-                                                            {instructor.firstName}{' '}
-                                                            {instructor.lastName}
+                                            <div className="flex items-center gap-4">
+                                                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#001F3F]/10 to-[#00B4D8]/10 flex items-center justify-center border border-gray-100">
+                                                    <UserCheck className="h-6 w-6 text-[#00B4D8]" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-base font-semibold text-[#001F3F]">
+                                                        {instructor.firstName} {instructor.lastName}
+                                                    </h3>
+                                                    <p className="text-sm text-gray-600 mt-0.5">
+                                                        {instructor.email}
+                                                    </p>
+                                                    {instructor.specialization && (
+                                                        <p className="text-xs text-gray-500 mt-1">
+                                                            {instructor.specialization}
                                                         </p>
-                                                        <div className="mt-1 flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
-                                                            {instructor.email && (
-                                                                <>
-                                                                    <span>{instructor.email}</span>
-                                                                    {instructor.specialization && (
-                                                                        <span>•</span>
-                                                                    )}
-                                                                </>
-                                                            )}
-                                                            {instructor.specialization && (
-                                                                <span>
-                                                                    {instructor.specialization}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <p className="mt-1 text-xs text-gray-500 flex items-center">
-                                                            <BookOpen className="h-3 w-3 mr-1" />
-                                                            {instructor._count.courses} curso(s)
-                                                        </p>
-                                                    </div>
+                                                    )}
                                                 </div>
                                             </div>
 
-                                            {/* Menú de acciones */}
-                                            <div className="flex items-center space-x-2 ml-4">
-                                                {/* CAMBIO CRÍTICO: Agregué relative aquí */}
+                                            <div className="flex items-center gap-4">
+                                                {instructor._count && (
+                                                    <div className="text-sm text-gray-600 flex items-center gap-1.5">
+                                                        <BookOpen className="h-4 w-4" />
+                                                        <span className="font-medium">
+                                                            {instructor._count.courses}
+                                                        </span>
+                                                        curso{instructor._count.courses !== 1 ? 's' : ''}
+                                                    </div>
+                                                )}
+
                                                 <div className="relative">
                                                     <button
                                                         onClick={() =>
@@ -224,130 +214,75 @@ export default function AdminInstructorsPage() {
                                                                     : instructor.id
                                                             )
                                                         }
-                                                        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                                                        className="p-2 text-gray-600 hover:text-[#00B4D8] hover:bg-[#00B4D8]/10 rounded-lg transition-colors"
                                                     >
-                                                        <MoreVertical className="h-5 w-5 text-gray-400" />
+                                                        <MoreVertical className="h-5 w-5" />
                                                     </button>
 
-                                                    {/* Dropdown - CAMBIO CRÍTICO: Aumenté z-index a z-50 */}
                                                     {activeDropdown === instructor.id && (
-                                                        <>
-                                                            {/* Overlay para cerrar el dropdown al hacer click fuera */}
-                                                            <div
-                                                                className="fixed inset-0 z-40"
-                                                                onClick={() => setActiveDropdown(null)}
-                                                            />
-
-                                                            <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
-                                                                <div className="py-1">
-                                                                    <button
-                                                                        onClick={() =>
-                                                                            handleEdit(instructor)
-                                                                        }
-                                                                        className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                                                                    >
-                                                                        <Edit className="h-4 w-4 mr-2" />
-                                                                        Editar
-                                                                    </button>
-
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            handleDelete(instructor.id);
-                                                                            setActiveDropdown(null);
-                                                                        }}
-                                                                        className="w-full flex items-center px-4 py-2 text-sm text-red-700 hover:bg-red-50 transition-colors"
-                                                                    >
-                                                                        <Trash2 className="h-4 w-4 mr-2" />
-                                                                        Eliminar
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        </>
+                                                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                                                            <button
+                                                                onClick={() => handleEdit(instructor)}
+                                                                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                                            >
+                                                                <Edit className="h-4 w-4" />
+                                                                Editar
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDelete(instructor.id)}
+                                                                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                                Eliminar
+                                                            </button>
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-
-                    {/* Paginación */}
-                    {pagination.totalPages > 1 && (
-                        <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 rounded-lg shadow">
-                            <div className="flex-1 flex justify-between sm:hidden">
-                                <button
-                                    onClick={() =>
-                                        setPagination({
-                                            ...pagination,
-                                            page: pagination.page - 1,
-                                        })
-                                    }
-                                    disabled={pagination.page === 1}
-                                    className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-                                >
-                                    Anterior
-                                </button>
-                                <button
-                                    onClick={() =>
-                                        setPagination({
-                                            ...pagination,
-                                            page: pagination.page + 1,
-                                        })
-                                    }
-                                    disabled={pagination.page === pagination.totalPages}
-                                    className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-                                >
-                                    Siguiente
-                                </button>
+                                ))}
                             </div>
-                            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-700">
+
+                            {/* Paginación */}
+                            <div className="border-t border-gray-100 px-6 py-4 bg-gray-50/50">
+                                <div className="flex items-center justify-between">
+                                    <div className="text-sm text-gray-600">
                                         Mostrando{' '}
                                         <span className="font-medium">
                                             {(pagination.page - 1) * pagination.limit + 1}
                                         </span>{' '}
                                         a{' '}
                                         <span className="font-medium">
-                                            {Math.min(
-                                                pagination.page * pagination.limit,
-                                                pagination.total
-                                            )}
+                                            {Math.min(pagination.page * pagination.limit, pagination.total)}
                                         </span>{' '}
-                                        de{' '}
-                                        <span className="font-medium">
-                                            {pagination.total}
-                                        </span>{' '}
-                                        resultados
-                                    </p>
-                                </div>
-                                <div>
-                                    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                                        de <span className="font-medium">{pagination.total}</span> resultados
+                                    </div>
+                                    <nav className="flex items-center gap-2">
                                         <button
                                             onClick={() =>
-                                                setPagination({
-                                                    ...pagination,
-                                                    page: pagination.page - 1,
-                                                })
+                                                setPagination(prev => ({
+                                                    ...prev,
+                                                    page: prev.page - 1,
+                                                }))
                                             }
                                             disabled={pagination.page === 1}
-                                            className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                            className="px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                         >
                                             Anterior
                                         </button>
+                                        <span className="px-4 py-2 text-sm font-medium text-gray-700">
+                                            Página {pagination.page} de {pagination.totalPages}
+                                        </span>
                                         <button
                                             onClick={() =>
-                                                setPagination({
-                                                    ...pagination,
-                                                    page: pagination.page + 1,
-                                                })
+                                                setPagination(prev => ({
+                                                    ...prev,
+                                                    page: prev.page + 1,
+                                                }))
                                             }
-                                            disabled={
-                                                pagination.page === pagination.totalPages
-                                            }
-                                            className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                            disabled={pagination.page === pagination.totalPages}
+                                            className="px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                         >
                                             Siguiente
                                         </button>

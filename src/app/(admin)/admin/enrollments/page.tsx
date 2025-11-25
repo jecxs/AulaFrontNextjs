@@ -1,7 +1,7 @@
 // src/app/(admin)/admin/enrollments/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import {useState, useEffect, useCallback} from 'react';
 import { useEnrollments } from '@/hooks/use-enrollments';
 import CreateEnrollmentModal from '@/components/admin/CreateEnrollmentModal';
 import EditEnrollmentModal from '@/components/admin/EditEnrollmentModal';
@@ -53,7 +53,7 @@ export default function AdminEnrollmentsPage() {
     const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
     // Cargar enrollments
-    const fetchEnrollments = async () => {
+    const fetchEnrollments = useCallback(async () => {
         try {
             const params: any = {
                 page: pagination.page,
@@ -75,11 +75,11 @@ export default function AdminEnrollmentsPage() {
         } catch (error) {
             console.error('Error al cargar enrollments:', error);
         }
-    };
+    }, [pagination.page, pagination.limit, searchQuery, statusFilter, paymentFilter, getEnrollments]);
 
     useEffect(() => {
         fetchEnrollments();
-    }, [pagination.page, statusFilter, paymentFilter]);
+    }, [fetchEnrollments]);
 
     // Búsqueda con debounce
     useEffect(() => {
@@ -87,20 +87,21 @@ export default function AdminEnrollmentsPage() {
             if (pagination.page === 1) {
                 fetchEnrollments();
             } else {
-                setPagination({ ...pagination, page: 1 });
+                setPagination(prev => ({ ...prev, page: 1 }));
             }
         }, 500);
 
         return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchQuery]);
 
-    const handleEdit = (enrollment: EnrollmentWithProgress) => {
+    const handleEdit = useCallback((enrollment: EnrollmentWithProgress) => {
         setSelectedEnrollment(enrollment);
         setShowEditModal(true);
         setActiveDropdown(null);
-    };
+    }, []);
 
-    const handleSuspend = async (enrollmentId: string) => {
+    const handleSuspend = useCallback(async (enrollmentId: string) => {
         if (!confirm('¿Estás seguro de que deseas suspender este enrollment?')) {
             return;
         }
@@ -112,9 +113,9 @@ export default function AdminEnrollmentsPage() {
             console.error('Error al suspender enrollment:', error);
         }
         setActiveDropdown(null);
-    };
+    }, [suspendEnrollment, fetchEnrollments]);
 
-    const handleActivate = async (enrollmentId: string) => {
+    const handleActivate = useCallback(async (enrollmentId: string) => {
         try {
             await activateEnrollment(enrollmentId);
             fetchEnrollments();
@@ -122,16 +123,15 @@ export default function AdminEnrollmentsPage() {
             console.error('Error al activar enrollment:', error);
         }
         setActiveDropdown(null);
-    };
+    }, [activateEnrollment, fetchEnrollments]);
 
-    const handleDelete = async (enrollmentId: string) => {
+    const handleDelete = useCallback(async (enrollmentId: string) => {
         if (
             !confirm(
                 '¿Estás seguro de que deseas eliminar este enrollment? Esta acción no se puede deshacer.'
             )
-        ) {
+        )
             return;
-        }
 
         try {
             await deleteEnrollment(enrollmentId);
@@ -140,7 +140,7 @@ export default function AdminEnrollmentsPage() {
             console.error('Error al eliminar enrollment:', error);
         }
         setActiveDropdown(null);
-    };
+    }, [deleteEnrollment, fetchEnrollments]);
 
     const getStatusBadge = (status: EnrollmentStatus) => {
         const variants = {
@@ -487,10 +487,10 @@ export default function AdminEnrollmentsPage() {
                                     <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
                                         <button
                                             onClick={() =>
-                                                setPagination({
-                                                    ...pagination,
-                                                    page: pagination.page - 1,
-                                                })
+                                                setPagination(prev => ({
+                                                    ...prev,
+                                                    page: prev.page - 1,
+                                                }))
                                             }
                                             disabled={pagination.page === 1}
                                             className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
@@ -499,10 +499,10 @@ export default function AdminEnrollmentsPage() {
                                         </button>
                                         <button
                                             onClick={() =>
-                                                setPagination({
-                                                    ...pagination,
-                                                    page: pagination.page + 1,
-                                                })
+                                                setPagination(prev => ({
+                                                    ...prev,
+                                                    page: prev.page + 1,
+                                                }))
                                             }
                                             disabled={pagination.page === pagination.totalPages}
                                             className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"

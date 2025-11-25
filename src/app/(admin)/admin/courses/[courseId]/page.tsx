@@ -1,7 +1,7 @@
 // src/app/(admin)/admin/courses/[courseId]/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import {useState, useEffect, useCallback} from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useCoursesAdmin } from '@/hooks/use-courses-admin';
 import { useEnrollments } from '@/hooks/use-enrollments';
@@ -82,7 +82,7 @@ export default function CourseDetailPage() {
     const [selectedModuleForLesson, setSelectedModuleForLesson] = useState<string | null>(null);
 
     // Funciones de carga
-    const reloadCourseData = async () => {
+    const reloadCourseData = useCallback(async () => {
         try {
             const [courseData, modulesData] = await Promise.all([
                 getCourseById(courseId),
@@ -93,22 +93,28 @@ export default function CourseDetailPage() {
         } catch (err) {
             console.error('Error al recargar curso:', err);
         }
-    };
+    }, [courseId, getCourseById, getModulesByCourse]);
 
-    const loadEnrollments = async () => {
+    // Remover enrollmentsPagination de las dependencias
+    const loadEnrollments = useCallback(async (
+        page: number,
+        limit: number,
+        statusFilter: string,
+        searchQuery: string
+    ) => {
         try {
-            const response = enrollmentSearchQuery
+            const response = searchQuery
                 ? await getEnrollments({
-                    page: enrollmentsPagination.page,
-                    limit: enrollmentsPagination.limit,
+                    page,
+                    limit,
                     courseId,
-                    status: enrollmentStatusFilter || undefined,
-                    search: enrollmentSearchQuery || undefined,
+                    status: statusFilter || undefined,
+                    search: searchQuery || undefined,
                 })
                 : await getCourseEnrollments(courseId, {
-                    page: enrollmentsPagination.page,
-                    limit: enrollmentsPagination.limit,
-                    status: enrollmentStatusFilter || undefined,
+                    page,
+                    limit,
+                    status: statusFilter || undefined,
                 });
             setEnrollments(response.data);
             setEnrollmentsPagination(response.pagination);
@@ -117,9 +123,9 @@ export default function CourseDetailPage() {
             const msg = err instanceof Error ? err.message : String(err);
             toast.error(msg || 'Error al cargar estudiantes');
         }
-    };
+    }, [courseId, getEnrollments, getCourseEnrollments]);
 
-    const loadCourseStatistics = async () => {
+    const loadCourseStatistics = useCallback(async () => {
         try {
             const stats = await getCourseStatistics(courseId);
             setCourseStats(stats);
@@ -128,7 +134,7 @@ export default function CourseDetailPage() {
             const msg = err instanceof Error ? err.message : String(err);
             toast.error(msg || 'Error al cargar estadísticas');
         }
-    };
+    }, [courseId, getCourseStatistics]);
 
     // Efectos
     useEffect(() => {
@@ -147,34 +153,52 @@ export default function CourseDetailPage() {
                 router.push('/admin/courses');
             }
         })();
-    }, [courseId, router]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [courseId]);
 
+    // ✅ SOLUCIÓN: Cargar enrollments cuando cambia el tab o los filtros
     useEffect(() => {
         if (activeTab === 'students') {
-            loadEnrollments();
+            loadEnrollments(
+                enrollmentsPagination.page,
+                enrollmentsPagination.limit,
+                enrollmentStatusFilter,
+                enrollmentSearchQuery
+            );
         } else if (activeTab === 'stats') {
             loadCourseStatistics();
         }
-    }, [activeTab, courseId, enrollmentsPagination.page, enrollmentStatusFilter, enrollmentSearchQuery]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+        activeTab,
+        enrollmentsPagination.page,
+        enrollmentsPagination.limit,
+        enrollmentStatusFilter,
+        enrollmentSearchQuery
+    ]);
 
+    // Reset de página cuando cambian los filtros
     useEffect(() => {
-        if (activeTab === 'students') {
+        if (activeTab === 'students' && enrollmentsPagination.page !== 1) {
             setEnrollmentsPagination(prev => ({ ...prev, page: 1 }));
         }
-    }, [enrollmentStatusFilter, enrollmentSearchQuery, activeTab]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [enrollmentStatusFilter, enrollmentSearchQuery]);
 
     // Handlers para módulos y lecciones
-    const toggleModule = (moduleId: string) => {
-        const newExpanded = new Set(expandedModules);
-        if (newExpanded.has(moduleId)) {
-            newExpanded.delete(moduleId);
-        } else {
-            newExpanded.add(moduleId);
-        }
-        setExpandedModules(newExpanded);
-    };
+    const toggleModule = useCallback((moduleId: string) => {
+        setExpandedModules(prev => {
+            const newExpanded = new Set(prev);
+            if (newExpanded.has(moduleId)) {
+                newExpanded.delete(moduleId);
+            } else {
+                newExpanded.add(moduleId);
+            }
+            return newExpanded;
+        });
+    }, []);
 
-    const handleDeleteModule = async (moduleId: string) => {
+    const handleDeleteModule = useCallback(async (moduleId: string) => {
         if (!confirm('¿Estás seguro de que deseas eliminar este módulo?')) return;
 
         try {
@@ -186,21 +210,20 @@ export default function CourseDetailPage() {
             const msg = error instanceof Error ? error.message : String(error);
             toast.error(msg || 'Error al eliminar módulo');
         }
-    };
+    }, [courseId, deleteModule, getModulesByCourse]);
 
-    const handleDeleteLesson = async (lessonId: string) => {
+    const handleDeleteLesson = useCallback(async (lessonId: string) => {
         if (!confirm('¿Estás seguro de que deseas eliminar esta lección?')) return;
 
         try {
             await deleteLesson(lessonId);
             toast.success('Lección eliminada exitosamente');
-            const modulesData = await getModulesByCourse(courseId);
-            setModules(modulesData);
+            reloadCourseData();
         } catch (error) {
             const msg = error instanceof Error ? error.message : String(error);
             toast.error(msg || 'Error al eliminar lección');
         }
-    };
+    }, [deleteLesson, reloadCourseData]);
 
     const handleEditModule = (module: Module) => {
         setSelectedModule(module);
@@ -217,35 +240,48 @@ export default function CourseDetailPage() {
         setShowCreateLessonModal(true);
     };
 
-    // Handlers para enrollments
-    const handleEnrollmentAction = async (
+    // ✅ SOLUCIÓN: Recargar enrollments sin causar loop
+    const handleEnrollmentAction = useCallback(async (
         enrollmentId: string,
         action: 'activate' | 'suspend' | 'delete'
     ) => {
         try {
-            if (action === 'delete') {
-                if (!confirm('¿Estás seguro de que deseas eliminar esta matrícula?')) return;
-                await deleteEnrollment(enrollmentId);
-                toast.success('Matrícula eliminada exitosamente');
-            } else if (action === 'activate') {
-                await activateEnrollment(enrollmentId);
-                toast.success('Matrícula activada exitosamente');
-            } else if (action === 'suspend') {
-                await suspendEnrollment(enrollmentId);
-                toast.success('Matrícula suspendida exitosamente');
+            switch (action) {
+                case 'activate':
+                    await activateEnrollment(enrollmentId);
+                    toast.success('Enrollment activado');
+                    break;
+                case 'suspend':
+                    await suspendEnrollment(enrollmentId);
+                    toast.success('Enrollment suspendido');
+                    break;
+                case 'delete':
+                    if (!confirm('¿Eliminar este enrollment?')) return;
+                    await deleteEnrollment(enrollmentId);
+                    toast.success('Enrollment eliminado');
+                    break;
             }
-            loadEnrollments();
-            reloadCourseData();
+            // Recargar con los valores actuales
+            loadEnrollments(
+                enrollmentsPagination.page,
+                enrollmentsPagination.limit,
+                enrollmentStatusFilter,
+                enrollmentSearchQuery
+            );
         } catch (error) {
             const msg = error instanceof Error ? error.message : String(error);
-            toast.error(
-                msg ||
-                `Error al ${
-                    action === 'delete' ? 'eliminar' : action === 'activate' ? 'activar' : 'suspender'
-                } matrícula`
-            );
+            toast.error(msg || 'Error al realizar la acción');
         }
-    };
+    }, [
+        activateEnrollment,
+        suspendEnrollment,
+        deleteEnrollment,
+        loadEnrollments,
+        enrollmentsPagination.page,
+        enrollmentsPagination.limit,
+        enrollmentStatusFilter,
+        enrollmentSearchQuery
+    ]);
 
     if (isLoading || !course) {
         return (
@@ -386,7 +422,12 @@ export default function CourseDetailPage() {
                 preSelectedCourseId={courseId}
                 onSuccess={() => {
                     setShowCreateEnrollmentModal(false);
-                    loadEnrollments();
+                    loadEnrollments(
+                        enrollmentsPagination.page,
+                        enrollmentsPagination.limit,
+                        enrollmentStatusFilter,
+                        enrollmentSearchQuery
+                    );
                     reloadCourseData();
                 }}
             />

@@ -35,24 +35,6 @@ export default function CourseDetailPage() {
         }
     }, [courseId]);
 
-    // Escuchar cambios en el progreso del curso para refrescar automáticamente
-    useEffect(() => {
-        const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
-            if (
-                event?.query?.queryKey?.[0] === 'course-progress' ||
-                event?.query?.queryKey?.[0] === 'student-course-progress' ||
-                event?.query?.queryKey?.[0] === 'student-enrollments'
-            ) {
-                // Refrescar datos del curso cuando cambie el progreso
-                if (courseId) {
-                    loadCourseData();
-                }
-            }
-        });
-
-        return () => unsubscribe();
-    }, [courseId, queryClient]);
-
     const loadCourseData = async () => {
         try {
             setIsLoading(true);

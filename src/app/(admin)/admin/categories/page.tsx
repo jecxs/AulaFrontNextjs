@@ -1,7 +1,7 @@
 // src/app/(admin)/admin/categories/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import {useState, useEffect, useCallback} from 'react';
 import { useCourseCategoriesAdmin } from '@/hooks/use-course-categories-admin';
 import { CourseCategoryList } from '@/types/course-category';
 import CategoryModal from '@/components/admin/categories/CategoryModal';
@@ -43,8 +43,9 @@ export default function AdminCategoriesPage() {
     );
     const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
-    // Cargar categorías
-    const fetchCategories = async () => {
+
+    //  Memoizar con useCallback
+    const fetchCategories = useCallback(async () => {
         try {
             const params: any = {
                 page: pagination.page,
@@ -61,11 +62,11 @@ export default function AdminCategoriesPage() {
             console.error('Error al cargar categorías:', error);
             toast.error('Error al cargar las categorías');
         }
-    };
+    }, [pagination.page, pagination.limit, searchQuery, statusFilter, getCategories]);
 
     useEffect(() => {
         fetchCategories();
-    }, [pagination.page, statusFilter]);
+    }, [fetchCategories]);
 
     // Búsqueda con debounce
     useEffect(() => {
@@ -73,14 +74,15 @@ export default function AdminCategoriesPage() {
             if (pagination.page === 1) {
                 fetchCategories();
             } else {
-                setPagination({ ...pagination, page: 1 });
+                setPagination(prev => ({ ...prev, page: 1 }));
             }
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [searchQuery]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchQuery]); //
 
-    const handleToggleStatus = async (categoryId: string) => {
+    const handleToggleStatus = useCallback(async (categoryId: string) => {
         try {
             await toggleCategoryStatus(categoryId);
             toast.success('Estado actualizado exitosamente');
@@ -88,9 +90,9 @@ export default function AdminCategoriesPage() {
         } catch (error) {
             console.error('Error al cambiar estado:', error);
         }
-    };
+    }, [toggleCategoryStatus, fetchCategories]);
 
-    const handleDelete = async (categoryId: string) => {
+    const handleDelete = useCallback(async (categoryId: string) => {
         if (
             !confirm(
                 '¿Estás seguro de que deseas eliminar esta categoría? Los cursos asociados quedarán sin categoría.'
@@ -105,22 +107,22 @@ export default function AdminCategoriesPage() {
         } catch (error) {
             console.error('Error al eliminar categoría:', error);
         }
-    };
+    }, [deleteCategory, fetchCategories]);
 
-    const handleEdit = (category: CourseCategoryList) => {
+    const handleEdit = useCallback((category: CourseCategoryList) => {
         setSelectedCategory(category);
         setShowModal(true);
-    };
+    }, []);
 
-    const handleCloseModal = () => {
+    const handleCloseModal = useCallback(() => {
         setShowModal(false);
         setSelectedCategory(null);
-    };
+    }, []);
 
-    const handleSuccess = () => {
+    const handleSuccess = useCallback(() => {
         handleCloseModal();
         fetchCategories();
-    };
+    }, [handleCloseModal, fetchCategories]);
 
     if (isLoading && categories.length === 0) {
         return (
@@ -325,10 +327,10 @@ export default function AdminCategoriesPage() {
                             <div className="flex-1 flex justify-between sm:hidden">
                                 <button
                                     onClick={() =>
-                                        setPagination({
-                                            ...pagination,
-                                            page: pagination.page - 1,
-                                        })
+                                        setPagination(prev => ({
+                                            ...prev,
+                                            page: prev.page - 1,
+                                        }))
                                     }
                                     disabled={pagination.page === 1}
                                     className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
@@ -337,10 +339,10 @@ export default function AdminCategoriesPage() {
                                 </button>
                                 <button
                                     onClick={() =>
-                                        setPagination({
-                                            ...pagination,
-                                            page: pagination.page + 1,
-                                        })
+                                        setPagination(prev => ({
+                                            ...prev,
+                                            page: prev.page + 1,
+                                        }))
                                     }
                                     disabled={pagination.page === pagination.totalPages}
                                     className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"

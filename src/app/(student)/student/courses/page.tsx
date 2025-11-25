@@ -1,7 +1,7 @@
 // src/app/(student)/student/courses/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import {useState, useEffect, useMemo, useCallback} from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { coursesApi } from '@/lib/api/courses';
 import {
@@ -30,6 +30,18 @@ export default function StudentCoursesPage() {
     });
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
+    const handleStatusChange = useCallback((status: CourseFilters['status']) => {
+        setFilters(prev => ({ ...prev, status }));
+    }, []);
+
+    const handleSearchChange = useCallback((search: string) => {
+        setFilters(prev => ({ ...prev, search }));
+    }, []);
+
+    const handleViewModeChange = useCallback((mode: 'grid' | 'list') => {
+        setViewMode(mode);
+    }, []);
+
     // Query para obtener los cursos del estudiante
     const {
         data: enrollmentsData,
@@ -45,7 +57,7 @@ export default function StudentCoursesPage() {
     const enrollments = enrollmentsData?.data || [];
 
     // Calcular estadísticas
-    const stats = {
+    const stats = useMemo(() => ({
         total: enrollments.length,
         completed: enrollments.filter(e => e.status === 'COMPLETED').length,
         inProgress: enrollments.filter(e =>
@@ -58,47 +70,54 @@ export default function StudentCoursesPage() {
             e.status === 'ACTIVE' &&
             (!e.progress || e.progress.completionPercentage === 0)
         ).length
-    };
+    }), [enrollments]);
 
     // Filtrar cursos según los filtros aplicados
-    const filteredEnrollments = enrollments.filter(enrollment => {
-        // Filtro por búsqueda
-        if (filters.search) {
-            const searchLower = filters.search.toLowerCase();
-            const titleMatch = enrollment.course.title.toLowerCase().includes(searchLower);
-            const instructorMatch = enrollment.course.instructor
-                ? `${enrollment.course.instructor.firstName} ${enrollment.course.instructor.lastName}`.toLowerCase().includes(searchLower)
-                : false;
-            if (!titleMatch && !instructorMatch) return false;
-        }
-
-        // Filtro por estado
-        if (filters.status !== 'all') {
-            switch (filters.status) {
-                case 'active':
-                    return enrollment.status === 'ACTIVE';
-                case 'completed':
-                    return enrollment.status === 'COMPLETED';
-                case 'in-progress':
-                    return enrollment.status === 'ACTIVE' &&
-                        enrollment.progress &&
-                        enrollment.progress.completionPercentage > 0 &&
-                        enrollment.progress.completionPercentage < 100;
-                default:
-                    return true;
+    const filteredEnrollments = useMemo(() => {
+        return enrollments.filter(enrollment => {
+            // Filtro por búsqueda
+            if (filters.search) {
+                const searchLower = filters.search.toLowerCase();
+                const titleMatch = enrollment.course.title.toLowerCase().includes(searchLower);
+                const instructorMatch = enrollment.course.instructor
+                    ? `${enrollment.course.instructor.firstName} ${enrollment.course.instructor.lastName}`
+                        .toLowerCase().includes(searchLower)
+                    : false;
+                if (!titleMatch && !instructorMatch) return false;
             }
-        }
 
-        return true;
-    });
+            // Filtro por estado
+            if (filters.status !== 'all') {
+                switch (filters.status) {
+                    case 'active':
+                        return enrollment.status === 'ACTIVE';
+                    case 'completed':
+                        return enrollment.status === 'COMPLETED';
+                    case 'in-progress':
+                        return enrollment.status === 'ACTIVE' &&
+                            enrollment.progress &&
+                            enrollment.progress.completionPercentage > 0 &&
+                            enrollment.progress.completionPercentage < 100;
+                    default:
+                        return true;
+                }
+            }
+
+            return true;
+        });
+    }, [enrollments, filters.search, filters.status]);
 
     // Manejar errores
-    useEffect(() => {
+    const handleError = useCallback(() => {
         if (error) {
             console.error('Error loading enrollments:', error);
             toast.error('Error al cargar los cursos');
         }
     }, [error]);
+
+    useEffect(() => {
+        handleError();
+    }, [handleError]);
 
     // Estados de carga
     if (isLoading) {
@@ -172,7 +191,7 @@ export default function StudentCoursesPage() {
                                 type="text"
                                 placeholder="Buscar por curso o instructor..."
                                 value={filters.search}
-                                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                                onChange={(e) => handleSearchChange(e.target.value)}
                                 className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#00B4D8] focus:border-[#00B4D8] transition-all duration-300 text-[#001F3F] placeholder:text-[#001F3F]/40"
                             />
                         </div>
@@ -184,7 +203,7 @@ export default function StudentCoursesPage() {
                             <SlidersHorizontal className="w-5 h-5 text-[#001F3F]/60" />
                             <select
                                 value={filters.status}
-                                onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value as any }))}
+                                onChange={(e) => handleStatusChange(e.target.value as CourseFilters['status'])}
                                 className="bg-transparent border-none focus:ring-0 text-sm font-semibold text-[#001F3F] cursor-pointer"
                             >
                                 <option value="all">Todos</option>
@@ -197,7 +216,7 @@ export default function StudentCoursesPage() {
                         {/* Toggle de vista (grid/list) */}
                         <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl">
                             <button
-                                onClick={() => setViewMode('grid')}
+                                onClick={() => handleViewModeChange('grid')}
                                 className={`p-2.5 rounded-lg transition-all duration-300 ${
                                     viewMode === 'grid'
                                         ? 'bg-white text-[#00B4D8] shadow-sm'
@@ -208,7 +227,7 @@ export default function StudentCoursesPage() {
                                 <LayoutGrid className="w-5 h-5" />
                             </button>
                             <button
-                                onClick={() => setViewMode('list')}
+                                onClick={() => handleViewModeChange('list')}
                                 className={`p-2.5 rounded-lg transition-all duration-300 ${
                                     viewMode === 'list'
                                         ? 'bg-white text-[#00B4D8] shadow-sm'

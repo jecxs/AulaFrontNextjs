@@ -1,7 +1,7 @@
 // src/app/(admin)/admin/courses/page.tsx
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useCoursesAdmin } from '@/hooks/use-courses-admin';
 import { Course, CourseStatus, CourseLevel } from '@/types/course';
 import CreateCourseModal from '@/components/admin/courses/CreateCourseModal';
@@ -48,20 +48,9 @@ export default function AdminCoursesPage() {
     const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
-    // Cerrar dropdown al hacer click fuera
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setActiveDropdown(null);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    // Cargar cursos
-    const fetchCourses = async () => {
+    // ✅ OPTIMIZACIÓN 1: Memoizar función fetchCourses con useCallback
+    // Esto evita que se recree en cada render
+    const fetchCourses = useCallback(async () => {
         try {
             const params: any = {
                 page: pagination.page,
@@ -79,26 +68,30 @@ export default function AdminCoursesPage() {
             console.error('Error al cargar cursos:', error);
             toast.error('Error al cargar los cursos');
         }
-    };
+    }, [pagination.page, pagination.limit, searchQuery, statusFilter, levelFilter, getCourses]);
 
+    // ✅ OPTIMIZACIÓN 2: useEffect con dependencias correctas
     useEffect(() => {
         fetchCourses();
-    }, [pagination.page, statusFilter, levelFilter]);
+    }, [fetchCourses]); // Ahora incluye fetchCourses correctamente memoizado
 
-    // Búsqueda con debounce
+    // ✅ OPTIMIZACIÓN 3: Debounce optimizado para búsqueda
     useEffect(() => {
+        // Solo ejecutar debounce si hay cambios en searchQuery
         const timer = setTimeout(() => {
             if (pagination.page === 1) {
                 fetchCourses();
             } else {
-                setPagination({ ...pagination, page: 1 });
+                setPagination(prev => ({ ...prev, page: 1 }));
             }
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [searchQuery]);
+        // ⚠️ IMPORTANTE: NO incluir fetchCourses aquí para evitar loops
+    }, [searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const handlePublish = async (courseId: string) => {
+    // ✅ OPTIMIZACIÓN 4: Memoizar handlers con useCallback
+    const handlePublish = useCallback(async (courseId: string) => {
         if (!confirm('¿Estás seguro de que deseas publicar este curso?')) return;
 
         try {
@@ -109,9 +102,9 @@ export default function AdminCoursesPage() {
         } catch (error) {
             console.error('Error al publicar curso:', error);
         }
-    };
+    }, [publishCourse, fetchCourses]);
 
-    const handleArchive = async (courseId: string) => {
+    const handleArchive = useCallback(async (courseId: string) => {
         if (!confirm('¿Estás seguro de que deseas archivar este curso?')) return;
 
         try {
@@ -122,9 +115,9 @@ export default function AdminCoursesPage() {
         } catch (error) {
             console.error('Error al archivar curso:', error);
         }
-    };
+    }, [archiveCourse, fetchCourses]);
 
-    const handleDelete = async (courseId: string) => {
+    const handleDelete = useCallback(async (courseId: string) => {
         if (
             !confirm(
                 '¿Estás seguro de que deseas eliminar este curso? Esta acción no se puede deshacer.'
@@ -140,94 +133,93 @@ export default function AdminCoursesPage() {
         } catch (error) {
             console.error('Error al eliminar curso:', error);
         }
-    };
+    }, [deleteCourse, fetchCourses]);
 
-    const getStatusBadge = (status: CourseStatus) => {
-        const badges = {
-            DRAFT: {
-                className: 'bg-gray-50 text-gray-700 border border-gray-200',
-                icon: Clock,
-                text: 'Borrador',
-            },
-            PUBLISHED: {
-                className: 'bg-green-50 text-green-700 border border-green-200',
-                icon: CheckCircle,
-                text: 'Publicado',
-            },
-            ARCHIVED: {
-                className: 'bg-amber-50 text-amber-700 border border-amber-200',
-                icon: Archive,
-                text: 'Archivado',
-            },
-        };
-
-        const badge = badges[status];
-        const Icon = badge.icon;
-
-        return (
-            <span
-                className={cn(
-                    'inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold',
-                    badge.className
-                )}
-            >
-                <Icon className="h-3.5 w-3.5 mr-1.5" />
-                {badge.text}
-            </span>
-        );
-    };
-
-    const getLevelBadge = (level: CourseLevel) => {
-        const levels = {
-            BEGINNER: { text: 'Principiante', color: 'text-blue-600' },
-            INTERMEDIATE: { text: 'Intermedio', color: 'text-[#00B4D8]' },
-            ADVANCED: { text: 'Avanzado', color: 'text-[#001F3F]' },
-        };
-        return levels[level];
-    };
-
-    const clearFilters = () => {
+    // ✅ OPTIMIZACIÓN 5: Memoizar función de limpiar filtros
+    const clearFilters = useCallback(() => {
         setSearchQuery('');
         setStatusFilter('');
         setLevelFilter('');
-    };
+        setPagination(prev => ({ ...prev, page: 1 }));
+    }, []);
 
-    const hasActiveFilters = searchQuery || statusFilter || levelFilter;
+    // ✅ OPTIMIZACIÓN 6: Memoizar verificación de filtros activos
+    const hasActiveFilters = useMemo(() => {
+        return searchQuery !== '' || statusFilter !== '' || levelFilter !== '';
+    }, [searchQuery, statusFilter, levelFilter]);
 
-    if (isLoading && courses.length === 0) {
+    // ✅ OPTIMIZACIÓN 7: Event listener con cleanup optimizado
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setActiveDropdown(null);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []); // Empty deps - solo se crea una vez
+
+    // ✅ OPTIMIZACIÓN 8: Memoizar badges de estado
+    const getStatusBadge = useCallback((status: CourseStatus) => {
+        const statusConfig = {
+            [CourseStatus.PUBLISHED]: {
+                label: 'Publicado',
+                className: 'bg-green-50 text-green-700 border border-green-200',
+                icon: CheckCircle,
+            },
+            [CourseStatus.DRAFT]: {
+                label: 'Borrador',
+                className: 'bg-gray-50 text-gray-700 border border-gray-200',
+                icon: Clock,
+            },
+            [CourseStatus.ARCHIVED]: {
+                label: 'Archivado',
+                className: 'bg-amber-50 text-amber-700 border border-amber-200',
+                icon: Archive,
+            },
+        };
+
+        const config = statusConfig[status] || statusConfig[CourseStatus.DRAFT];
+        const Icon = config.icon;
+
         return (
-            <div className="flex items-center justify-center h-64">
-                <LoadingSpinner size="sm" />
-            </div>
+            <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold', config.className)}>
+                <Icon className="h-3.5 w-3.5" />
+                {config.label}
+            </span>
         );
-    }
+    }, []);
 
     return (
-        <div className="space-y-6">
+        <div className="max-w-[1600px] mx-auto space-y-6">
             {/* Header */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-[#001F3F]">
+                        <h1 className="text-2xl font-bold text-[#001F3F] flex items-center gap-3">
+                            <div className="p-2 bg-gradient-to-br from-[#00B4D8]/20 to-[#001F3F]/10 rounded-xl">
+                                <BookOpen className="h-6 w-6 text-[#00B4D8]" />
+                            </div>
                             Gestión de Cursos
                         </h1>
-                        <p className="text-gray-600 mt-1 text-sm">
-                            Administra todos los cursos de la plataforma
+                        <p className="text-sm text-gray-600 mt-1">
+                            {pagination.total} curso{pagination.total !== 1 ? 's' : ''} en total
                         </p>
                     </div>
                     <button
                         onClick={() => setShowCreateModal(true)}
-                        className="inline-flex items-center px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-[#001F3F] to-[#003366] hover:from-[#003366] hover:to-[#001F3F] shadow-md hover:shadow-lg transition-all duration-200"
+                        className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#00B4D8] to-[#0096C7] text-white rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-300 font-medium"
                     >
-                        <Plus className="h-5 w-5 mr-2" />
+                        <Plus className="h-5 w-5" />
                         Crear Curso
                     </button>
                 </div>
             </div>
 
-            {/* Filtros y búsqueda */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-                <div className="flex items-center gap-3 mb-4">
+            {/* Filtros */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                         <Filter className="h-5 w-5 text-[#00B4D8]" />
                         <span className="text-sm font-semibold text-[#001F3F]">Filtros</span>
@@ -262,15 +254,13 @@ export default function AdminCoursesPage() {
                     <div>
                         <select
                             value={statusFilter}
-                            onChange={(e) =>
-                                setStatusFilter(e.target.value as CourseStatus | '')
-                            }
-                            className="w-full h-11 rounded-lg border border-gray-200 shadow-sm focus:border-[#00B4D8] focus:ring-2 focus:ring-[#00B4D8]/20 transition-all text-sm font-medium"
+                            onChange={(e) => setStatusFilter(e.target.value as CourseStatus | '')}
+                            className="w-full h-11 rounded-lg border border-gray-200 shadow-sm focus:border-[#00B4D8] focus:ring-2 focus:ring-[#00B4D8]/20 transition-all"
                         >
                             <option value="">Todos los estados</option>
-                            <option value="DRAFT">Borrador</option>
-                            <option value="PUBLISHED">Publicado</option>
-                            <option value="ARCHIVED">Archivado</option>
+                            <option value={CourseStatus.PUBLISHED}>Publicados</option>
+                            <option value={CourseStatus.DRAFT}>Borradores</option>
+                            <option value={CourseStatus.ARCHIVED}>Archivados</option>
                         </select>
                     </div>
 
@@ -278,244 +268,194 @@ export default function AdminCoursesPage() {
                     <div>
                         <select
                             value={levelFilter}
-                            onChange={(e) =>
-                                setLevelFilter(e.target.value as CourseLevel | '')
-                            }
-                            className="w-full h-11 rounded-lg border border-gray-200 shadow-sm focus:border-[#00B4D8] focus:ring-2 focus:ring-[#00B4D8]/20 transition-all text-sm font-medium"
+                            onChange={(e) => setLevelFilter(e.target.value as CourseLevel | '')}
+                            className="w-full h-11 rounded-lg border border-gray-200 shadow-sm focus:border-[#00B4D8] focus:ring-2 focus:ring-[#00B4D8]/20 transition-all"
                         >
                             <option value="">Todos los niveles</option>
-                            <option value="BEGINNER">Principiante</option>
-                            <option value="INTERMEDIATE">Intermedio</option>
-                            <option value="ADVANCED">Avanzado</option>
+                            <option value={CourseLevel.BEGINNER}>Principiante</option>
+                            <option value={CourseLevel.INTERMEDIATE}>Intermedio</option>
+                            <option value={CourseLevel.ADVANCED}>Avanzado</option>
                         </select>
                     </div>
                 </div>
             </div>
 
             {/* Lista de cursos */}
-            {courses.length === 0 ? (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-[#001F3F]/5 to-[#00B4D8]/5 mb-4">
-                        <BookOpen className="h-8 w-8 text-[#00B4D8]" />
-                    </div>
-                    <h3 className="text-base font-semibold text-gray-900">
-                        {searchQuery || statusFilter || levelFilter
-                            ? 'No se encontraron cursos'
-                            : 'No hay cursos registrados'}
-                    </h3>
-                    <p className="mt-2 text-sm text-gray-500">
-                        {searchQuery || statusFilter || levelFilter
-                            ? 'Intenta ajustando los filtros de búsqueda'
-                            : 'Comienza creando tu primer curso'}
-                    </p>
-                    {!searchQuery && !statusFilter && !levelFilter && (
-                        <button
-                            onClick={() => setShowCreateModal(true)}
-                            className="mt-4 inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-[#00B4D8] bg-[#00B4D8]/10 hover:bg-[#00B4D8]/20 transition-colors"
-                        >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Crear primer curso
-                        </button>
-                    )}
+            {isLoading ? (
+                <div className="flex justify-center items-center py-20">
+                    <LoadingSpinner size="lg" />
                 </div>
             ) : (
                 <>
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible">
-                        <ul className="divide-y divide-gray-100">
-                            {courses.map((course) => (
-                                <li key={course.id} className="hover:bg-gray-50/50 transition-colors">
-                                    <div className="px-6 py-5">
-                                        <div className="flex items-start justify-between gap-6">
-                                            <div className="flex items-start gap-4 flex-1 min-w-0">
-                                                {/* Thumbnail */}
-                                                <div className="flex-shrink-0">
-                                                    {course.thumbnailUrl ? (
-                                                        <img
-                                                            src={course.thumbnailUrl}
-                                                            alt={course.title}
-                                                            className="h-20 w-20 rounded-xl object-cover shadow-sm border border-gray-100"
-                                                        />
-                                                    ) : (
-                                                        <div className="h-20 w-20 rounded-xl bg-gradient-to-br from-[#001F3F]/10 to-[#00B4D8]/10 flex items-center justify-center border border-gray-100">
-                                                            <BookOpen className="h-8 w-8 text-[#00B4D8]" />
-                                                        </div>
-                                                    )}
-                                                </div>
+                    {courses.length === 0 ? (
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+                            <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
+                            <h3 className="mt-4 text-lg font-medium text-gray-900">
+                                No se encontraron cursos
+                            </h3>
+                            <p className="mt-2 text-sm text-gray-500">
+                                {hasActiveFilters
+                                    ? 'Intenta ajustar los filtros de búsqueda'
+                                    : 'Comienza creando tu primer curso'}
+                            </p>
+                            {!hasActiveFilters && (
+                                <button
+                                    onClick={() => setShowCreateModal(true)}
+                                    className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-[#00B4D8] text-white rounded-lg hover:bg-[#0096C7] transition-colors"
+                                >
+                                    <Plus className="h-5 w-5" />
+                                    Crear Primer Curso
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div className="divide-y divide-gray-100">
+                                {courses.map((course) => (
+                                    <div
+                                        key={course.id}
+                                        className="p-6 hover:bg-gray-50/50 transition-colors"
+                                    >
+                                        <div className="flex items-center gap-6">
+                                            {/* Thumbnail */}
+                                            <div className="flex-shrink-0">
+                                                {course.thumbnailUrl ? (
+                                                    <img
+                                                        src={course.thumbnailUrl}
+                                                        alt={course.title}
+                                                        className="h-20 w-20 rounded-xl object-cover shadow-sm border border-gray-100"
+                                                    />
+                                                ) : (
+                                                    <div className="h-20 w-20 rounded-xl bg-gradient-to-br from-[#001F3F]/10 to-[#00B4D8]/10 flex items-center justify-center border border-gray-100">
+                                                        <BookOpen className="h-8 w-8 text-[#00B4D8]" />
+                                                    </div>
+                                                )}
+                                            </div>
 
-                                                {/* Info del curso */}
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-start justify-between gap-4">
-                                                        <div className="flex-1 min-w-0">
-                                                            <Link
-                                                                href={`/admin/courses/${course.id}`}
-                                                                className="text-base font-semibold text-[#001F3F] hover:text-[#00B4D8] transition-colors block truncate"
+                                            {/* Info del curso */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <div className="flex-1 min-w-0">
+                                                        <Link
+                                                            href={`/admin/courses/${course.id}`}
+                                                            className="text-base font-semibold text-[#001F3F] hover:text-[#00B4D8] transition-colors block truncate"
+                                                        >
+                                                            {course.title}
+                                                        </Link>
+                                                        <p className="text-sm text-gray-600 mt-1 line-clamp-1">
+                                                            {course.summary || 'Sin descripción'}
+                                                        </p>
+
+                                                        <div className="flex flex-wrap items-center gap-3 mt-3">
+                                                            {getStatusBadge(course.status)}
+
+                                                            {course.category && (
+                                                                <span className="text-xs text-gray-600 flex items-center gap-1">
+                                                                    <span className="font-medium">Categoría:</span>
+                                                                    {course.category.name}
+                                                                </span>
+                                                            )}
+
+                                                            {course._count && (
+                                                                <>
+                                                                    <span className="text-xs text-gray-600 flex items-center gap-1">
+                                                                        <Users className="h-3.5 w-3.5" />
+                                                                        {course._count.enrollments} estudiantes
+                                                                    </span>
+                                                                    <span className="text-xs text-gray-600 flex items-center gap-1">
+                                                                        <BookOpen className="h-3.5 w-3.5" />
+                                                                        {course._count.modules} módulos
+                                                                    </span>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Acciones */}
+                                                    <div className="flex items-center gap-2">
+                                                        <Link
+                                                            href={`/admin/courses/${course.id}`}
+                                                            className="p-2 text-gray-600 hover:text-[#00B4D8] hover:bg-[#00B4D8]/10 rounded-lg transition-colors"
+                                                            title="Ver detalles"
+                                                        >
+                                                            <Eye className="h-5 w-5" />
+                                                        </Link>
+
+                                                        <div className="relative" ref={activeDropdown === course.id ? dropdownRef : null}>
+                                                            <button
+                                                                onClick={() =>
+                                                                    setActiveDropdown(
+                                                                        activeDropdown === course.id
+                                                                            ? null
+                                                                            : course.id
+                                                                    )
+                                                                }
+                                                                className="p-2 text-gray-600 hover:text-[#00B4D8] hover:bg-[#00B4D8]/10 rounded-lg transition-colors"
                                                             >
-                                                                {course.title}
-                                                            </Link>
-                                                            <div className="mt-2 flex items-center flex-wrap gap-x-4 gap-y-2">
-                                                                <span className="inline-flex items-center text-sm text-gray-600">
-                                                                    <span className="font-medium text-gray-900">{course.category?.name}</span>
-                                                                </span>
-                                                                <span className="text-gray-300">•</span>
-                                                                <span className={cn(
-                                                                    "text-sm font-medium",
-                                                                    getLevelBadge(course.level).color
-                                                                )}>
-                                                                    {getLevelBadge(course.level).text}
-                                                                </span>
-                                                                <span className="text-gray-300">•</span>
-                                                                <span className="inline-flex items-center text-sm text-gray-600">
-                                                                    <Users className="h-4 w-4 mr-1.5 text-[#00B4D8]" />
-                                                                    <span className="font-medium">{course._count?.enrollments || 0}</span>
-                                                                    <span className="ml-1">estudiantes</span>
-                                                                </span>
-                                                                <span className="text-gray-300">•</span>
-                                                                <span className="text-sm text-gray-600">
-                                                                    <span className="font-medium">{course._count?.modules || 0}</span> módulos
-                                                                </span>
-                                                            </div>
-                                                            {course.summary && (
-                                                                <p className="mt-2 text-sm text-gray-500 line-clamp-2">
-                                                                    {course.summary}
-                                                                </p>
+                                                                <MoreVertical className="h-5 w-5" />
+                                                            </button>
+
+                                                            {activeDropdown === course.id && (
+                                                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                                                                    {course.status === CourseStatus.DRAFT && (
+                                                                        <button
+                                                                            onClick={() => handlePublish(course.id)}
+                                                                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                                                        >
+                                                                            <CheckCircle className="h-4 w-4" />
+                                                                            Publicar
+                                                                        </button>
+                                                                    )}
+
+                                                                    {course.status === CourseStatus.PUBLISHED && (
+                                                                        <button
+                                                                            onClick={() => handleArchive(course.id)}
+                                                                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                                                        >
+                                                                            <Archive className="h-4 w-4" />
+                                                                            Archivar
+                                                                        </button>
+                                                                    )}
+
+                                                                    <button
+                                                                        onClick={() => handleDelete(course.id)}
+                                                                        className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                        Eliminar
+                                                                    </button>
+                                                                </div>
                                                             )}
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
-
-                                            {/* Estado y acciones */}
-                                            <div className="flex items-center gap-3 flex-shrink-0">
-                                                {/* Badge de estado */}
-                                                {getStatusBadge(course.status)}
-
-                                                {/* Menú de acciones */}
-                                                <div className="relative" ref={activeDropdown === course.id ? dropdownRef : null}>
-                                                    <button
-                                                        onClick={() =>
-                                                            setActiveDropdown(
-                                                                activeDropdown === course.id
-                                                                    ? null
-                                                                    : course.id
-                                                            )
-                                                        }
-                                                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                                                    >
-                                                        <MoreVertical className="h-5 w-5 text-gray-400" />
-                                                    </button>
-
-                                                    {/* Dropdown con z-index alto para evitar cortes */}
-                                                    {activeDropdown === course.id && (
-                                                        <div className="absolute right-0 mt-2 w-56 rounded-xl shadow-xl bg-white ring-1 ring-black ring-opacity-5 z-[100] border border-gray-100">
-                                                            <div className="py-2">
-                                                                <Link
-                                                                    href={`/admin/courses/${course.id}`}
-                                                                    className="flex items-center px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                                                                    onClick={() => setActiveDropdown(null)}
-                                                                >
-                                                                    <Eye className="h-4 w-4 mr-3 text-[#00B4D8]" />
-                                                                    Ver/Editar
-                                                                </Link>
-
-                                                                {course.status === 'DRAFT' && (
-                                                                    <button
-                                                                        onClick={() =>
-                                                                            handlePublish(course.id)
-                                                                        }
-                                                                        className="w-full flex items-center px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                                                                    >
-                                                                        <CheckCircle className="h-4 w-4 mr-3 text-green-500" />
-                                                                        Publicar
-                                                                    </button>
-                                                                )}
-
-                                                                {course.status === 'PUBLISHED' && (
-                                                                    <button
-                                                                        onClick={() =>
-                                                                            handleArchive(course.id)
-                                                                        }
-                                                                        className="w-full flex items-center px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                                                                    >
-                                                                        <Archive className="h-4 w-4 mr-3 text-amber-500" />
-                                                                        Archivar
-                                                                    </button>
-                                                                )}
-
-                                                                <div className="my-1 border-t border-gray-100" />
-
-                                                                <button
-                                                                    onClick={() =>
-                                                                        handleDelete(course.id)
-                                                                    }
-                                                                    className="w-full flex items-center px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
-                                                                >
-                                                                    <Trash2 className="h-4 w-4 mr-3" />
-                                                                    Eliminar
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
                                         </div>
                                     </div>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-
-                    {/* Paginación */}
-                    {pagination.totalPages > 1 && (
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-6 py-4 flex items-center justify-between">
-                            <div className="flex-1 flex justify-between sm:hidden">
-                                <button
-                                    onClick={() =>
-                                        setPagination({ ...pagination, page: pagination.page - 1 })
-                                    }
-                                    disabled={pagination.page === 1}
-                                    className="relative inline-flex items-center px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    Anterior
-                                </button>
-                                <button
-                                    onClick={() =>
-                                        setPagination({ ...pagination, page: pagination.page + 1 })
-                                    }
-                                    disabled={pagination.page === pagination.totalPages}
-                                    className="ml-3 relative inline-flex items-center px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    Siguiente
-                                </button>
+                                ))}
                             </div>
-                            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-600">
+
+                            {/* Paginación */}
+                            <div className="border-t border-gray-100 px-6 py-4 bg-gray-50/50">
+                                <div className="flex items-center justify-between">
+                                    <div className="text-sm text-gray-600">
                                         Mostrando{' '}
-                                        <span className="font-semibold text-[#001F3F]">
+                                        <span className="font-medium">
                                             {(pagination.page - 1) * pagination.limit + 1}
                                         </span>{' '}
                                         a{' '}
-                                        <span className="font-semibold text-[#001F3F]">
-                                            {Math.min(
-                                                pagination.page * pagination.limit,
-                                                pagination.total
-                                            )}
+                                        <span className="font-medium">
+                                            {Math.min(pagination.page * pagination.limit, pagination.total)}
                                         </span>{' '}
-                                        de{' '}
-                                        <span className="font-semibold text-[#001F3F]">
-                                            {pagination.total}
-                                        </span>{' '}
-                                        resultados
-                                    </p>
-                                </div>
-                                <div>
-                                    <nav className="relative z-0 inline-flex rounded-lg shadow-sm -space-x-px">
+                                        de <span className="font-medium">{pagination.total}</span> resultados
+                                    </div>
+                                    <nav className="flex items-center gap-2">
                                         <button
                                             onClick={() =>
-                                                setPagination({
-                                                    ...pagination,
-                                                    page: pagination.page - 1,
-                                                })
+                                                setPagination(prev => ({
+                                                    ...prev,
+                                                    page: prev.page - 1,
+                                                }))
                                             }
                                             disabled={pagination.page === 1}
                                             className="relative inline-flex items-center px-4 py-2 rounded-l-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -527,10 +467,10 @@ export default function AdminCoursesPage() {
                                         </span>
                                         <button
                                             onClick={() =>
-                                                setPagination({
-                                                    ...pagination,
-                                                    page: pagination.page + 1,
-                                                })
+                                                setPagination(prev => ({
+                                                    ...prev,
+                                                    page: prev.page + 1,
+                                                }))
                                             }
                                             disabled={pagination.page === pagination.totalPages}
                                             className="relative inline-flex items-center px-4 py-2 rounded-r-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
