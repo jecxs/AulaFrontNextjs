@@ -1,5 +1,5 @@
 // src/lib/utils/constants.ts
-export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Aula Virtual';
+export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Palomino Learning Center';
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export const ROUTES = {
@@ -20,6 +20,8 @@ export const ROUTES = {
         USERS: '/admin/users',
         ENROLLMENTS: '/admin/enrollments',
         ANALYTICS: '/admin/analytics',
+        CATEGORIES: '/admin/categories',
+        INSTRUCTORS: '/admin/instructors',
     },
     UNAUTHORIZED: '/unauthorized',
     HOME: '/',

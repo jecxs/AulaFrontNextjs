@@ -19,6 +19,8 @@ import {
     QuizPreview,
     SubmitQuizDto,
     QuizSubmissionResult,
+    UserQuizHistory,
+    QuizAttemptDetail,
     QuizResults,
 } from '@/types/quiz';
 
@@ -54,9 +56,51 @@ export const quizzesApi = {
         return apiClient.post(`/quizzes/${quizId}/submit`, data);
     },
 
-    // Obtener resultados de un quiz (ESTUDIANTE)
-    getResults: async (quizId: string, userId: string): Promise<QuizResults> => {
-        return apiClient.get(`/quizzes/${quizId}/results/${userId}`);
+    // ========== NUEVOS ENDPOINTS DE ATTEMPTS ==========
+
+    // Obtener historial de intentos del estudiante en un quiz
+    getMyAttempts: async (quizId: string): Promise<UserQuizHistory> => {
+        return apiClient.get(`/quizzes/${quizId}/my-attempts`);
+    },
+
+    // Obtener detalle de un intento específico (con respuestas)
+    getAttemptDetail: async (attemptId: string): Promise<QuizAttemptDetail> => {
+        return apiClient.get(`/quizzes/attempts/${attemptId}`);
+    },
+
+    // Obtener el mejor intento del estudiante
+    getBestAttempt: async (quizId: string): Promise<{
+        hasBestAttempt: boolean;
+        bestAttempt?: {
+            id: string;
+            score: number;
+            maxScore: number;
+            percentage: number;
+            passed: boolean;
+            submittedAt: string;
+        };
+    }> => {
+        return apiClient.get(`/quizzes/${quizId}/best-attempt`);
+    },
+
+    // Obtener resultados completos (para compatibilidad con código existente)
+    getResults: async (quizId: string): Promise<QuizResults> => {
+        try {
+            // Obtener información del quiz
+            const quiz = await apiClient.get<QuizForStudent>(`/quizzes/${quizId}`);
+
+            // Obtener historial de intentos
+            const history = await apiClient.get<UserQuizHistory>(`/quizzes/${quizId}/my-attempts`);
+
+            return {
+                quiz,
+                history,
+                canRetake: true, // Siempre permitir reintentar según requerimientos
+            };
+        } catch (error) {
+            console.error('Error getting quiz results:', error);
+            throw error;
+        }
     },
 
     // Actualizar quiz (Solo ADMIN)

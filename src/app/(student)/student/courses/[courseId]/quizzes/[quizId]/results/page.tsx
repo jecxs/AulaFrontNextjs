@@ -1,12 +1,20 @@
 // src/app/(student)/student/courses/[courseId]/quizzes/[quizId]/results/page.tsx
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuizResults } from '@/hooks/use-student-quizzes';
-import { CheckCircle, XCircle, Trophy, Clock, Target, RotateCcw, ArrowLeft, TrendingUp } from 'lucide-react';
+import { coursesApi } from '@/lib/api/courses';
+import { CheckCircle, XCircle, RotateCcw, ArrowRight, ChevronRight, Home } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/loading-spinner';
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { ROUTES } from '@/lib/utils/constants';
+
+interface NextItem {
+    type: 'lesson' | 'module-end' | null;
+    moduleId?: string;
+    lessonId?: string;
+    moduleTitle?: string;
+}
 
 export default function QuizResultsPage() {
     const params = useParams();
@@ -14,26 +22,88 @@ export default function QuizResultsPage() {
     const courseId = params.courseId as string;
     const quizId = params.quizId as string;
 
-    const [userId, setUserId] = useState<string | null>(null);
+    const [nextItem, setNextItem] = useState<NextItem>({ type: null });
+    const [isLoadingNext, setIsLoadingNext] = useState(true);
 
-    // Obtener el userId del localStorage
+    const { data: results, isLoading, error } = useQuizResults(quizId);
+
+    // Cargar información de navegación
     useEffect(() => {
-        const userStr = localStorage.getItem('user');
-        if (userStr) {
-            try {
-                const user = JSON.parse(userStr);
-                setUserId(user.id);
-            } catch (error) {
-                console.error('Error parsing user from localStorage:', error);
-            }
+        if (results?.quiz) {
+            loadNextItem();
         }
-    }, []);
+    }, [results]);
 
-    const { data: results, isLoading, error } = useQuizResults(quizId, userId);
+    const loadNextItem = async () => {
+        try {
+            setIsLoadingNext(true);
 
-    if (isLoading || !userId) {
+            // Obtener módulos del curso ordenados
+            const modules = await coursesApi.getCourseModules(courseId);
+
+            // Ordenar módulos por 'order' field para asegurar el orden correcto
+            const sortedModules = modules.sort((a: any, b: any) => a.order - b.order);
+
+            // Encontrar el índice del módulo actual del quiz
+            const currentModuleIndex = sortedModules.findIndex((m: any) => m.id === results!.quiz.moduleId);
+
+            console.log('📍 Current module index:', currentModuleIndex);
+            console.log('📚 Total modules:', sortedModules.length);
+            console.log('🎯 Current quiz module:', results!.quiz.moduleId);
+
+            // Verificar si hay un siguiente módulo DESPUÉS del módulo actual del quiz
+            if (currentModuleIndex !== -1 && currentModuleIndex < sortedModules.length - 1) {
+                const nextModule = sortedModules[currentModuleIndex + 1];
+
+                console.log('➡️ Next module found:', nextModule.title, nextModule.id);
+
+                // Obtener la primera lección del siguiente módulo
+                const nextModuleLessons = await coursesApi.getModuleLessons(nextModule.id);
+
+                if (nextModuleLessons.length > 0) {
+                    // Ordenar lecciones por 'order'
+                    const sortedLessons = nextModuleLessons.sort((a: any, b: any) => a.order - b.order);
+
+                    setNextItem({
+                        type: 'lesson',
+                        moduleId: nextModule.id,
+                        lessonId: sortedLessons[0].id,
+                        moduleTitle: nextModule.title,
+                    });
+
+                    console.log('✅ Next item set: First lesson of next module');
+                } else {
+                    console.log('⚠️ Next module has no lessons');
+                    setNextItem({ type: 'module-end' });
+                }
+            } else {
+                // Es el último módulo del curso
+                console.log('🏁 This is the last module of the course');
+                setNextItem({ type: 'module-end' });
+            }
+        } catch (error) {
+            console.error('❌ Error loading next item:', error);
+            setNextItem({ type: 'module-end' });
+        } finally {
+            setIsLoadingNext(false);
+        }
+    };
+
+    const handleContinue = () => {
+        if (nextItem.type === 'lesson' && nextItem.lessonId) {
+            router.push(`${ROUTES.STUDENT.COURSES}/${courseId}/lessons/${nextItem.lessonId}`);
+        } else {
+            router.push(`${ROUTES.STUDENT.COURSES}/${courseId}`);
+        }
+    };
+
+    const handleRetake = () => {
+        router.push(`${ROUTES.STUDENT.COURSES}/${courseId}/quizzes/${quizId}`);
+    };
+
+    if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
                 <LoadingSpinner size="lg" />
             </div>
         );
@@ -41,14 +111,14 @@ export default function QuizResultsPage() {
 
     if (error || !results) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
                 <div className="text-center">
-                    <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Error al cargar resultados</h3>
-                    <p className="text-gray-600 mb-4">No se pudieron cargar los resultados del quiz.</p>
+                    <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Error al cargar resultados</h3>
+                    <p className="text-gray-600 mb-6">No se pudieron cargar los resultados del quiz.</p>
                     <button
-                        onClick={() => router.push(`/student/courses/${courseId}`)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        onClick={() => router.push(`${ROUTES.STUDENT.COURSES}/${courseId}`)}
+                        className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >
                         Volver al curso
                     </button>
@@ -57,188 +127,209 @@ export default function QuizResultsPage() {
         );
     }
 
-    const lastAttempt = results.lastAttempt || results.attempts[results.attempts.length - 1];
-    const passed = lastAttempt?.passed || false;
-    const score = lastAttempt?.score || 0;
+    const { quiz, history } = results;
+    const lastAttempt = history.attempts[0];
+    const hasPassed = history.passed;
+    const bestPercentage = history.bestPercentage;
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
-            {/* Resultado principal */}
-            <div
-                className={`rounded-lg shadow-lg border-2 p-8 ${
-                    passed
-                        ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200'
-                        : 'bg-gradient-to-br from-orange-50 to-yellow-50 border-orange-200'
-                }`}
-            >
-                <div className="text-center">
-                    {passed ? (
-                        <CheckCircle className="w-20 h-20 text-green-600 mx-auto mb-4" />
+        <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-3xl mx-auto">
+                {/* Header del Resultado */}
+                <div className="text-center mb-8">
+                    {hasPassed ? (
+                        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-6">
+                            <CheckCircle className="w-12 h-12 text-green-600" />
+                        </div>
                     ) : (
-                        <XCircle className="w-20 h-20 text-orange-600 mx-auto mb-4" />
+                        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-orange-100 mb-6">
+                            <XCircle className="w-12 h-12 text-orange-600" />
+                        </div>
                     )}
 
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                        {passed ? '¡Felicitaciones!' : 'Quiz Completado'}
+                    <h1 className="text-3xl font-bold text-gray-900 mb-3">
+                        {hasPassed ? '¡Felicitaciones!' : 'Intento Completado'}
                     </h1>
 
-                    <p className="text-lg text-gray-700 mb-6">
-                        {passed
-                            ? 'Has aprobado el quiz exitosamente'
-                            : 'No alcanzaste el puntaje mínimo para aprobar'}
+                    <p className="text-lg text-gray-600 mb-8">
+                        {hasPassed
+                            ? 'Has completado exitosamente la evaluación'
+                            : 'Puedes volver a intentarlo cuando quieras'}
                     </p>
 
-                    {/* Puntaje */}
-                    <div className="inline-block bg-white rounded-lg shadow-sm px-8 py-4 mb-6">
-                        <div className="text-5xl font-bold text-gray-900 mb-1">{score}%</div>
-                        <div className="text-sm text-gray-600">Tu puntaje</div>
-                    </div>
-
-                    {/* Información adicional */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-                        <div className="bg-white rounded-lg p-4 shadow-sm">
-                            <div className="flex items-center justify-center mb-2">
-                                <Target className="w-5 h-5 text-blue-600 mr-2" />
-                                <span className="text-sm font-medium text-gray-600">Puntaje mínimo</span>
-                            </div>
-                            <div className="text-2xl font-bold text-gray-900">
-                                {results.quiz.passingScore}%
-                            </div>
+                    {/* Score Principal */}
+                    <div className="inline-block">
+                        <div className="text-6xl font-bold text-gray-900 mb-2">
+                            {lastAttempt.percentage}%
                         </div>
-
-
-                        <div className="bg-white rounded-lg p-4 shadow-sm">
-                            <div className="flex items-center justify-center mb-2">
-                                <TrendingUp className="w-5 h-5 text-green-600 mr-2" />
-                                <span className="text-sm font-medium text-gray-600">Mejor puntaje</span>
-                            </div>
-                            <div className="text-2xl font-bold text-gray-900">
-                                {results.bestScore || score}%
-                            </div>
+                        <div className="text-sm text-gray-500">
+                            {lastAttempt.score} de {lastAttempt.maxScore} puntos
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Historial de intentos */}
-            {results.attempts.length > 0 && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <h2 className="text-xl font-bold text-gray-900 mb-4">Historial de intentos</h2>
-                    <div className="space-y-3">
-                        {results.attempts.map((attempt, index) => (
-                            <div
-                                key={attempt.id}
-                                className={`flex items-center justify-between p-4 rounded-lg ${
-                                    attempt.passed
-                                        ? 'bg-green-50 border border-green-200'
-                                        : 'bg-gray-50 border border-gray-200'
-                                }`}
-                            >
-                                <div className="flex items-center space-x-4">
-                                    <div
-                                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                                            attempt.passed
-                                                ? 'bg-green-200 text-green-700'
-                                                : 'bg-gray-200 text-gray-700'
-                                        }`}
-                                    >
-                                        {index + 1}
-                                    </div>
-                                    <div>
-                                        <div className="font-medium text-gray-900">
-                                            Intento {index + 1}
-                                        </div>
-                                        <div className="text-sm text-gray-600">
-                                            {new Date(attempt.submittedAt).toLocaleDateString('es-ES', {
-                                                year: 'numeric',
-                                                month: 'long',
-                                                day: 'numeric',
-                                                hour: '2-digit',
-                                                minute: '2-digit',
-                                            })}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center space-x-4">
-                                    <div className="text-right">
-                                        <div className="text-2xl font-bold text-gray-900">
-                                            {attempt.score}%
-                                        </div>
-                                        <div className="text-xs text-gray-600">
-                                            {attempt.passed ? 'Aprobado' : 'No aprobado'}
-                                        </div>
-                                    </div>
-                                    {attempt.passed ? (
-                                        <CheckCircle className="w-6 h-6 text-green-600" />
-                                    ) : (
-                                        <XCircle className="w-6 h-6 text-gray-400" />
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Acciones */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex flex-col sm:flex-row gap-3">
-                    <Link
-                        href={`/student/courses/${courseId}`}
-                        className="flex-1 flex items-center justify-center px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
-                    >
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Volver al curso
-                    </Link>
-
-                    {results.canRetake && (
-                        <Link
-                            href={`/student/courses/${courseId}/quizzes/${quizId}`}
-                            className="flex-1 flex items-center justify-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
-                        >
-                            <RotateCcw className="w-4 h-4 mr-2" />
-                            Reintentar quiz ({results.attemptsRemaining} {results.attemptsRemaining === 1 ? 'intento' : 'intentos'} restantes)
-                        </Link>
-                    )}
-
-                    {!results.canRetake && !passed && (
-                        <div className="flex-1 flex items-center justify-center px-6 py-3 bg-gray-100 text-gray-500 font-medium rounded-lg cursor-not-allowed">
-                            <XCircle className="w-4 h-4 mr-2" />
-                            No hay más intentos disponibles
-                        </div>
-                    )}
-                </div>
-
-                {results.canRetake && !passed && (
-                    <p className="text-sm text-gray-600 text-center mt-3">
-                        Tienes {results.attemptsRemaining} {results.attemptsRemaining === 1 ? 'intento' : 'intentos'} restantes para aprobar el quiz
-                    </p>
-                )}
-            </div>
-
-            {/* Información del quiz */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="font-semibold text-gray-900 mb-3">Información del quiz</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                        <span className="text-gray-600">Título:</span>
-                        <p className="font-medium text-gray-900">{results.quiz.title}</p>
-                    </div>
-                    <div>
-                        <span className="text-gray-600">Preguntas:</span>
-                        <p className="font-medium text-gray-900">{results.quiz.questionsCount}</p>
-                    </div>
-                    <div>
-                        <span className="text-gray-600">Puntos totales:</span>
-                        <p className="font-medium text-gray-900">{results.quiz.totalPoints}</p>
-                    </div>
-                    {results.quiz.timeLimit && (
+                {/* Tarjeta de Estadísticas Minimalista */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                    <div className="grid grid-cols-3 gap-6 text-center">
                         <div>
-                            <span className="text-gray-600">Tiempo límite:</span>
-                            <p className="font-medium text-gray-900">{results.quiz.timeLimit} minutos</p>
+                            <div className="text-2xl font-bold text-gray-900 mb-1">
+                                {quiz.passingScore}%
+                            </div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wider">
+                                Mínimo
+                            </div>
                         </div>
+                        <div>
+                            <div className="text-2xl font-bold text-green-600 mb-1">
+                                {bestPercentage}%
+                            </div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wider">
+                                Tu mejor
+                            </div>
+                        </div>
+                        <div>
+                            <div className="text-2xl font-bold text-blue-600 mb-1">
+                                {history.totalAttempts}
+                            </div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wider">
+                                {history.totalAttempts === 1 ? 'Intento' : 'Intentos'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Historial de Intentos - Compacto */}
+                {history.attempts.length > 1 && (
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                        <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">
+                            Historial
+                        </h3>
+                        <div className="space-y-2">
+                            {history.attempts.slice(0, 5).map((attempt, index) => (
+                                <div
+                                    key={attempt.id}
+                                    className={`flex items-center justify-between py-2 px-3 rounded-lg ${
+                                        index === 0
+                                            ? 'bg-blue-50 border border-blue-200'
+                                            : 'bg-gray-50'
+                                    }`}
+                                >
+                                    <div className="flex items-center space-x-3">
+                                        <span className="text-sm font-medium text-gray-900">
+                                            #{history.totalAttempts - index}
+                                        </span>
+                                        {index === 0 && (
+                                            <span className="text-xs px-2 py-0.5 bg-blue-600 text-white rounded-full">
+                                                Actual
+                                            </span>
+                                        )}
+                                        {attempt.percentage === bestPercentage && index !== 0 && (
+                                            <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full">
+                                                Mejor
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center space-x-3">
+                                        <span className="text-sm font-semibold text-gray-900">
+                                            {attempt.percentage}%
+                                        </span>
+                                        {attempt.passed ? (
+                                            <CheckCircle className="w-4 h-4 text-green-600" />
+                                        ) : (
+                                            <XCircle className="w-4 h-4 text-gray-400" />
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {history.attempts.length > 5 && (
+                            <p className="text-xs text-gray-500 text-center mt-3">
+                                Mostrando los 5 intentos más recientes de {history.totalAttempts}
+                            </p>
+                        )}
+                    </div>
+                )}
+
+                {/* Botones de Acción */}
+                <div className="space-y-3">
+                    {/* Botón Principal: Continuar o Finalizar */}
+                    {!isLoadingNext && (
+                        <button
+                            onClick={handleContinue}
+                            className="w-full flex items-center justify-center space-x-2 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors shadow-sm"
+                        >
+                            {nextItem.type === 'lesson' ? (
+                                <>
+                                    <span>Continuar al siguiente módulo</span>
+                                    <ArrowRight className="w-5 h-5" />
+                                </>
+                            ) : (
+                                <>
+                                    <span>Finalizar y volver al curso</span>
+                                    <Home className="w-5 h-5" />
+                                </>
+                            )}
+                        </button>
                     )}
+
+                    {isLoadingNext && (
+                        <button
+                            disabled
+                            className="w-full flex items-center justify-center space-x-2 px-6 py-4 bg-gray-200 text-gray-500 font-medium rounded-xl cursor-not-allowed"
+                        >
+                            <LoadingSpinner size="sm" />
+                            <span>Cargando...</span>
+                        </button>
+                    )}
+
+                    {/* Botón Secundario: Reintentar */}
+                    {!hasPassed && (
+                        <button
+                            onClick={handleRetake}
+                            className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-xl transition-colors border border-gray-300"
+                        >
+                            <RotateCcw className="w-4 h-4" />
+                            <span>Reintentar evaluación</span>
+                        </button>
+                    )}
+
+                    {hasPassed && (
+                        <button
+                            onClick={handleRetake}
+                            className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-xl transition-colors border border-gray-300"
+                        >
+                            <RotateCcw className="w-4 h-4" />
+                            <span>Practicar de nuevo</span>
+                        </button>
+                    )}
+                </div>
+
+                {/* Mensaje informativo */}
+                <div className="mt-6 text-center">
+                    {nextItem.type === 'lesson' && nextItem.moduleTitle && (
+                        <p className="text-sm text-gray-600">
+                            A continuación: <span className="font-medium text-gray-900">{nextItem.moduleTitle}</span>
+                        </p>
+                    )}
+                    {nextItem.type === 'module-end' && (
+                        <p className="text-sm text-gray-600">
+                            {hasPassed
+                                ? '🎉 ¡Has completado el curso!'
+                                : 'Este es el último módulo del curso'}
+                        </p>
+                    )}
+                </div>
+
+                {/* Info del Quiz - Minimalista */}
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                    <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-500">Evaluación:</span>
+                        <span className="font-medium text-gray-900">{quiz.title}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm mt-2">
+                        <span className="text-gray-500">Preguntas:</span>
+                        <span className="font-medium text-gray-900">{quiz.questionsCount}</span>
+                    </div>
                 </div>
             </div>
         </div>

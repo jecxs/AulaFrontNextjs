@@ -80,7 +80,8 @@ export function useQuizzesAdmin() {
         setIsLoading(true);
         setError(null);
         try {
-            return await quizzesApi.getByModule(moduleId);
+            const result = await quizzesApi.getAll({ moduleId });
+            return result.data;
         } catch (err: unknown) {
             const errorMessage = getErrorMessage(
                 err,

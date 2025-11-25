@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useCoursesAdmin } from '@/hooks/use-courses-admin';
 import { useEnrollments } from '@/hooks/use-enrollments';
-import { Course, Module, Lesson } from '@/types/course';
+import { Course, Module, Lesson, CourseStatistics } from '@/types/course';
 import { EnrollmentWithProgress, EnrollmentStatus } from '@/lib/api/enrollments';
 import {
     BookOpen,
@@ -42,8 +42,6 @@ import EditModuleModal from '@/components/admin/courses/EditModuleModal';
 import CreateLessonModal from '@/components/admin/courses/CreateLessonModal';
 import EditLessonModal from '@/components/admin/courses/EditLessonModal';
 import EditCourseModal from '@/components/admin/courses/EditCourseModal';
-import CreateQuizModal from '@/components/admin/courses/CreateQuizModal';
-import EditQuizModal from '@/components/admin/courses/EditQuizModal';
 import ModuleQuizzesCard from '@/components/admin/courses/ModuleQuizzesCard';
 import CreateEnrollmentModal from '@/components/admin/CreateEnrollmentModal';
 
@@ -59,6 +57,7 @@ export default function CourseDetailPage() {
         getModulesByCourse,
         deleteModule,
         deleteLesson,
+        getCourseStatistics,
         isLoading,
     } = useCoursesAdmin();
 
@@ -76,6 +75,7 @@ export default function CourseDetailPage() {
     const [course, setCourse] = useState<Course | null>(null);
     const [modules, setModules] = useState<Module[]>([]);
     const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
+    const [courseStats, setCourseStats] = useState<CourseStatistics | null>(null);
 
     // Estados para enrollments
     const [enrollments, setEnrollments] = useState<EnrollmentWithProgress[]>([]);
@@ -145,6 +145,23 @@ export default function CourseDetailPage() {
             toast.error(msg || 'Error al cargar estudiantes');
         }
     };
+
+    const loadCourseStatistics = async () => {
+        try {
+            const stats = await getCourseStatistics(courseId);
+            setCourseStats(stats);
+        } catch (err) {
+            console.error('Error al cargar estadísticas:', err);
+            const msg = err instanceof Error ? err.message : String(err);
+            toast.error(msg || 'Error al cargar estadísticas');
+        }
+    };
+    useEffect(() => {
+        if (activeTab === 'stats') {
+            loadCourseStatistics();
+        }
+    }, [activeTab, courseId]);
+
     useEffect(() => {
         (async () => {
             try {
@@ -864,15 +881,228 @@ export default function CourseDetailPage() {
                 {/* Contenido del Tab: Estadísticas */}
                 {activeTab === 'stats' && (
                     <div className="p-6">
-                        <div className="text-center py-12">
-                            <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
-                            <h3 className="mt-2 text-sm font-medium text-gray-900">
-                                Estadísticas
-                            </h3>
-                            <p className="mt-1 text-sm text-gray-500">
-                                Esta sección estará disponible próximamente
-                            </p>
-                        </div>
+                        {isLoading || !courseStats ? (
+                            <div className="flex items-center justify-center py-12">
+                                <LoadingSpinner size="sm" />
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                {/* Métricas Principales */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-600">
+                                                    Total Estudiantes
+                                                </p>
+                                                <p className="text-3xl font-bold text-gray-900 mt-2">
+                                                    {courseStats.totalStudents}
+                                                </p>
+                                            </div>
+                                            <div className="p-3 bg-blue-100 rounded-full">
+                                                <Users className="h-6 w-6 text-blue-600" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-600">
+                                                    Progreso Promedio
+                                                </p>
+                                                <p className="text-3xl font-bold text-gray-900 mt-2">
+                                                    {courseStats.progressStats.averageCompletionRate}%
+                                                </p>
+                                            </div>
+                                            <div className="p-3 bg-green-100 rounded-full">
+                                                <TrendingUp className="h-6 w-6 text-green-600" />
+                                            </div>
+                                        </div>
+                                        <div className="mt-3">
+                                            <div className="w-full bg-gray-200 rounded-full h-2">
+                                                <div
+                                                    className="bg-green-600 h-2 rounded-full transition-all"
+                                                    style={{ width: `${courseStats.progressStats.averageCompletionRate}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-600">
+                                                    Contenido
+                                                </p>
+                                                <p className="text-3xl font-bold text-gray-900 mt-2">
+                                                    {courseStats.totalModules}
+                                                </p>
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    {courseStats.totalLessons} lecciones
+                                                </p>
+                                            </div>
+                                            <div className="p-3 bg-purple-100 rounded-full">
+                                                <BookOpen className="h-6 w-6 text-purple-600" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-600">
+                                                    Activos (7 días)
+                                                </p>
+                                                <p className="text-3xl font-bold text-gray-900 mt-2">
+                                                    {courseStats.activityStats.activeStudentsLast7Days}
+                                                </p>
+                                            </div>
+                                            <div className="p-3 bg-orange-100 rounded-full">
+                                                <Calendar className="h-6 w-6 text-orange-600" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Estado de Matrículas */}
+                                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                                        Estado de Matrículas
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                        <div className="flex items-center space-x-3">
+                                            <div className="flex-shrink-0">
+                                                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-600">Activos</p>
+                                                <p className="text-xl font-semibold text-gray-900">
+                                                    {courseStats.enrollmentStats.active}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center space-x-3">
+                                            <div className="flex-shrink-0">
+                                                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-600">Completados</p>
+                                                <p className="text-xl font-semibold text-gray-900">
+                                                    {courseStats.enrollmentStats.completed}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center space-x-3">
+                                            <div className="flex-shrink-0">
+                                                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-600">Suspendidos</p>
+                                                <p className="text-xl font-semibold text-gray-900">
+                                                    {courseStats.enrollmentStats.suspended}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center space-x-3">
+                                            <div className="flex-shrink-0">
+                                                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-600">Expirados</p>
+                                                <p className="text-xl font-semibold text-gray-900">
+                                                    {courseStats.enrollmentStats.expired}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Estadísticas de Pago */}
+                                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                                        Estado de Pagos
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-gray-600">
+                                    Confirmados
+                                </span>
+                                                <span className="text-sm font-semibold text-green-600">
+                                    {courseStats.paymentStats.confirmed}
+                                </span>
+                                            </div>
+                                            <div className="w-full bg-gray-200 rounded-full h-2">
+                                                <div
+                                                    className="bg-green-600 h-2 rounded-full"
+                                                    style={{
+                                                        width: `${
+                                                            (courseStats.paymentStats.confirmed /
+                                                                courseStats.totalStudents) *
+                                                            100
+                                                        }%`,
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-gray-600">
+                                    Pendientes
+                                </span>
+                                                <span className="text-sm font-semibold text-yellow-600">
+                                    {courseStats.paymentStats.pending}
+                                </span>
+                                            </div>
+                                            <div className="w-full bg-gray-200 rounded-full h-2">
+                                                <div
+                                                    className="bg-yellow-500 h-2 rounded-full"
+                                                    style={{
+                                                        width: `${
+                                                            (courseStats.paymentStats.pending /
+                                                                courseStats.totalStudents) *
+                                                            100
+                                                        }%`,
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Actividad Reciente */}
+                                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                                        Actividad Reciente
+                                    </h3>
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center space-x-3">
+                                                <UserPlus className="h-5 w-5 text-blue-500" />
+                                                <span className="text-sm text-gray-600">
+                                    Nuevas matrículas (30 días)
+                                </span>
+                                            </div>
+                                            <span className="text-lg font-semibold text-gray-900">
+                                {courseStats.activityStats.recentEnrollments}
+                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center space-x-3">
+                                                <CheckCircle className="h-5 w-5 text-green-500" />
+                                                <span className="text-sm text-gray-600">
+                                    Estudiantes con progreso
+                                </span>
+                                            </div>
+                                            <span className="text-lg font-semibold text-gray-900">
+                                {courseStats.progressStats.studentsWithProgress}
+                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

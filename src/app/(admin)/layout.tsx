@@ -3,7 +3,7 @@
 
 import { AdminGuard } from '@/lib/auth/guards';
 import { useAuth } from '@/lib/auth/context';
-import { LogOut, Users, BookOpen, BarChart3, Settings, UserCheck } from 'lucide-react';
+import {LogOut, Users, BookOpen, BarChart3, Settings, UserCheck, BookIcon, Video} from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { APP_NAME, ROUTES } from '@/lib/utils/constants';
@@ -12,6 +12,9 @@ import { cn } from '@/lib/utils/cn';
 const adminNavigation = [
     { name: 'Dashboard', href: ROUTES.ADMIN.DASHBOARD, icon: BarChart3 },
     { name: 'Cursos', href: ROUTES.ADMIN.COURSES, icon: BookOpen },
+    { name: 'Categorías', href: '/admin/categories', icon: BookIcon },
+    { name: 'Instructores', href: '/admin/instructors', icon: UserCheck },
+    { name: 'Clases en Vivo', href: '/admin/live-sessions', icon: Video },
     { name: 'Usuarios', href: ROUTES.ADMIN.USERS, icon: Users },
     { name: 'Inscripciones', href: ROUTES.ADMIN.ENROLLMENTS, icon: UserCheck },
     { name: 'Configuración', href: '/admin/settings', icon: Settings },

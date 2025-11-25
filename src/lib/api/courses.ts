@@ -20,7 +20,7 @@ import {
     UpdateLessonDto,
     ReorderLessonsDto,
     CreateResourceDto,
-    UpdateResourceDto,
+    UpdateResourceDto, CourseStatistics,
 } from '@/types/course';
 import { MyEnrollmentsResponse } from '@/types/enrollment';
 
@@ -102,6 +102,10 @@ export const coursesApi = {
     // Obtener estadísticas de cursos (Admin)
     getStats: async (): Promise<CourseStats> => {
         return apiClient.get<CourseStats>('/courses/stats');
+    },
+    // Obtener estadísticas de un curso específico (Admin)
+    getCourseStatistics: async (courseId: string): Promise<CourseStatistics> => {
+        return apiClient.get<CourseStatistics>(`/courses/${courseId}/statistics`);
     },
 
     // Obtener cursos por instructor (Admin)

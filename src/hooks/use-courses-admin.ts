@@ -26,7 +26,7 @@ import {
     Resource,
     CreateResourceDto,
     UpdateResourceDto,
-    QueryCoursesDto,
+    QueryCoursesDto, CourseStatistics,
 } from '@/types/course';
 import {cleanUpdateLessonDto} from "@/lib/utils/dto-cleaner";
 
@@ -156,6 +156,21 @@ export function useCoursesAdmin() {
             setIsLoading(false);
         }
     }, []);
+
+    const getCourseStatistics = useCallback(async (courseId: string): Promise<CourseStatistics> => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            return await coursesApi.getCourseStatistics(courseId);
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, 'Error al cargar estadísticas del curso');
+            setError(errorMessage);
+            throw err;
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
 
     // ========== MODULES ==========
     const createModule = useCallback(async (data: CreateModuleDto): Promise<Module> => {
@@ -515,6 +530,7 @@ export function useCoursesAdmin() {
         archiveCourse,
         deleteCourse,
         getCourseStats,
+        getCourseStatistics,
 
         // Modules
         createModule,
@@ -554,6 +570,7 @@ export function useCoursesAdmin() {
         archiveCourse,
         deleteCourse,
         getCourseStats,
+        getCourseStatistics,
         createModule,
         getModulesByCourse,
         getModuleById,

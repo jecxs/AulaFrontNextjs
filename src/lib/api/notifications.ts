@@ -1,33 +1,56 @@
 // src/lib/api/notifications.ts
 import { apiClient } from './client';
-import { Notification } from '@/types/course';
+import type {
+    Notification,
+    NotificationSummary,
+    UnreadCountResponse,
+    MarkAsReadResponse,
+    MarkAsReadDto,
+    QueryNotificationsDto,
+} from '@/types/notification';
 
+// ========== NOTIFICATIONS API ==========
 export const notificationsApi = {
-    // Obtener mis notificaciones
-    getMyNotifications: async (unreadOnly = false): Promise<Notification[]> => {
+    /**
+     * GET /notifications
+     * Obtener mis notificaciones (con opción de filtrar solo no leídas)
+     */
+    getMyNotifications: async (unreadOnly?: boolean): Promise<NotificationSummary> => {
         const params = unreadOnly ? { unreadOnly: 'true' } : {};
         return apiClient.get('/notifications', { params });
     },
 
-    // Obtener contador de no leídas
-    getUnreadCount: async (): Promise<{ unreadCount: number }> => {
+    /**
+     * GET /notifications/unread-count
+     * Obtener el contador de notificaciones no leídas
+     */
+    getUnreadCount: async (): Promise<UnreadCountResponse> => {
         return apiClient.get('/notifications/unread-count');
     },
 
-    // Marcar notificaciones como leídas
-    markAsRead: async (notificationIds: string[]): Promise<void> => {
+    /**
+     * PATCH /notifications/mark-as-read
+     * Marcar notificaciones específicas como leídas
+     */
+    markAsRead: async (notificationIds: string[]): Promise<MarkAsReadResponse> => {
         return apiClient.patch('/notifications/mark-as-read', {
-            notificationIds
+            notificationIds,
         });
     },
 
-    // Marcar todas como leídas
-    markAllAsRead: async (): Promise<void> => {
-        return apiClient.patch('/notifications/mark-all-read');
+    /**
+     * PATCH /notifications/mark-all-read
+     * Marcar todas las notificaciones como leídas
+     */
+    markAllAsRead: async (): Promise<MarkAsReadResponse> => {
+        return apiClient.patch('/notifications/mark-all-read', {});
     },
 
-    // Eliminar notificación
-    deleteNotification: async (notificationId: string): Promise<void> => {
-        return apiClient.delete(`/notifications/${notificationId}`);
+    /**
+     * DELETE /notifications/:id
+     * Eliminar una notificación específica
+     */
+    deleteNotification: async (id: string): Promise<void> => {
+        return apiClient.delete(`/notifications/${id}`);
     },
 };

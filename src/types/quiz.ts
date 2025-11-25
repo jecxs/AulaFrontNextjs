@@ -243,6 +243,7 @@ export interface QuizSubmissionResult {
     percentage: number;
     passed: boolean;
     submittedAt: Date;
+    attemptId?: string; // ID del intento guardado
     answers: {
         questionId: string;
         selectedOptions: string[];
@@ -252,24 +253,46 @@ export interface QuizSubmissionResult {
     }[];
 }
 
-// ========== QUIZ RESULTS ==========
+// ========== QUIZ ATTEMPTS ==========
 export interface QuizAttempt {
     id: string;
-    quizId: string;
-    userId: string;
     score: number;
+    maxScore: number;
+    percentage: number;
     passed: boolean;
     submittedAt: string;
 }
 
+export interface QuizAttemptDetail extends QuizAttempt {
+    quizTitle: string;
+    answers: any;
+    questions: Array<{
+        id: string;
+        text: string;
+        type: string;
+        weight: number;
+        answerOptions: AnswerOption[];
+    }>;
+}
+
+// ========== USER QUIZ HISTORY ==========
+export interface UserQuizHistory {
+    quizId: string;
+    quizTitle: string;
+    passingScore: number;
+    totalAttempts: number;
+    bestScore: number;
+    bestPercentage: number;
+    lastAttempt?: string;
+    passed: boolean; // Si alguna vez aprobó
+    attempts: QuizAttempt[];
+}
+
+// ========== QUIZ RESULTS (Para backwards compatibility y UI) ==========
 export interface QuizResults {
     quiz: QuizForStudent;
-    attempts: QuizAttempt[];
-    attemptsUsed: number;
-    attemptsRemaining: number;
-    canRetake: boolean;
-    bestScore?: number;
-    lastAttempt?: QuizAttempt;
+    history: UserQuizHistory;
+    canRetake: boolean; // Siempre true según tus requerimientos
 }
 
 // ========== MODULE WITH QUIZZES ==========

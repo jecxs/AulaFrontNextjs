@@ -16,7 +16,16 @@ export interface CourseCategoryWithCourses extends CourseCategory {
         status: string;
         level: string;
         thumbnailUrl?: string;
-        enrollmentCount: number;
+        price?: number;
+        createdAt: string;
+        publishedAt?: string;
+        instructor: {
+            firstName: string;
+            lastName: string;
+        };
+        _count: {
+            enrollments: number;
+        };
     }>;
     _count: {
         courses: number;
@@ -36,23 +45,21 @@ export interface CourseCategoryList {
 
 export interface CreateCourseCategoryDto {
     name: string;
-    slug: string;
     description?: string;
     isActive?: boolean;
 }
 
 export interface UpdateCourseCategoryDto {
     name?: string;
-    slug?: string;
     description?: string;
     isActive?: boolean;
 }
 
 export interface QueryCourseCategoriesDto {
-    search?: string;
-    isActive?: boolean;
     page?: number;
     limit?: number;
+    search?: string;
+    isActive?: boolean;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
 }
@@ -71,6 +78,6 @@ export interface CategoryStats {
     total: number;
     active: number;
     inactive: number;
-    categoriesWithCourses: number;
-    categoriesWithoutCourses: number;
+    withCourses: number;
+    withoutCourses: number;
 }

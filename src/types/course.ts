@@ -423,3 +423,27 @@ export interface Enrollment {
     expiresAt?: string;
 
 }
+
+export interface CourseStatistics {
+    totalStudents: number;
+    totalModules: number;
+    totalLessons: number;
+    enrollmentStats: {
+        active: number;
+        completed: number;
+        suspended: number;
+        expired: number;
+    };
+    paymentStats: {
+        confirmed: number;
+        pending: number;
+    };
+    progressStats: {
+        averageCompletionRate: number;
+        studentsWithProgress: number;
+    };
+    activityStats: {
+        recentEnrollments: number;
+        activeStudentsLast7Days: number;
+    };
+}
