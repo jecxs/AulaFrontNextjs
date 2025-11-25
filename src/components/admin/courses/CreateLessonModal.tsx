@@ -31,8 +31,6 @@ export default function CreateLessonModal({ isOpen, onClose, moduleId, onSuccess
     const [uploadProgress, setUploadProgress] = useState<UploadProgress>({ loaded: 0, total: 0, percentage: 0 });
     const [errors, setErrors] = useState<Record<string,string>>({});
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    // Si el proxy /api/bunny-upload no tiene configuración (Bunny API key/zone), lo marcamos
-    const [proxyUnavailable, setProxyUnavailable] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
@@ -103,9 +101,39 @@ export default function CreateLessonModal({ isOpen, onClose, moduleId, onSuccess
                 return;
             }
 
-            // Para lecciones de texto, seguir usando la API existente que crea la lesson con JSON
-            await createLesson(form);
-            toast.success('Lección creada');
+            // Para lecciones de texto, primero crear la lección
+            const createdLesson = await createLesson(form);
+
+            // Si hay un archivo PDF seleccionado, subirlo como Resource
+            if (form.type === LessonType.TEXT && selectedFile) {
+                const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+                const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                formData.append('lessonId', createdLesson.id);
+                formData.append('customFileName', selectedFile.name);
+
+                const response = await fetch(`${apiBase}/resources/upload`, {
+                    method: 'POST',
+                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    let errorMsg = `Error al subir PDF: ${response.status}`;
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        errorMsg = errorJson.message || errorJson.error || errorMsg;
+                    } catch {
+                        errorMsg = errorText || errorMsg;
+                    }
+                    throw new Error(errorMsg);
+                }
+            }
+
+            toast.success('Lección creada correctamente');
             if (onSuccess) onSuccess();
             handleClose();
         } catch (err) {
@@ -274,7 +302,7 @@ export default function CreateLessonModal({ isOpen, onClose, moduleId, onSuccess
                                         <h4 className="font-medium flex items-center"><FileText className="h-4 w-4 mr-2" />Contenido de Texto</h4>
 
                                         <div>
-                                            <label className="block text-sm font-medium mb-2">Contenido (Markdown)</label>
+                                            <label className="block text-sm font-medium mb-2">Contenido (Markdown) *</label>
                                             <textarea
                                                 value={form.markdownContent || ''}
                                                 onChange={(e) => setForm({ ...form, markdownContent: e.target.value })}
@@ -310,7 +338,7 @@ export default function CreateLessonModal({ isOpen, onClose, moduleId, onSuccess
                                             {selectedFile && !uploading && (
                                                 <div>
                                                     <p className="mt-3 text-sm text-gray-700">Archivo seleccionado: <strong>{selectedFile.name}</strong></p>
-                                                    <p className="mt-2 text-sm text-gray-600">El archivo se subirá al backend cuando pulses <strong>Crear Lección</strong>.</p>
+                                                    <p className="mt-2 text-sm text-gray-600">El PDF se subirá como recurso cuando pulses <strong>Crear Lección</strong>.</p>
                                                 </div>
                                             )}
 

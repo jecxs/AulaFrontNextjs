@@ -192,7 +192,7 @@ export default function AdminUsersPage() {
                     </p>
                 </div>
             ) : (
-                <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+                <div className="bg-white shadow sm:rounded-lg">
                     <ul className="divide-y divide-gray-200">
                         {filteredStudents.map((student) => (
                             <li key={student.id} className="hover:bg-gray-50">

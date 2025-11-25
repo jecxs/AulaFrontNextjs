@@ -207,7 +207,7 @@ export default function AdminCategoriesPage() {
                 </div>
             ) : (
                 <>
-                    <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+                    <div className="bg-white shadow sm:rounded-lg">
                         <ul className="divide-y divide-gray-200">
                             {categories.map((category) => (
                                 <li key={category.id} className="hover:bg-gray-50">
