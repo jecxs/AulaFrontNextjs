@@ -85,7 +85,7 @@ export default function StudentDashboard() {
             {/* Hero Section - Saludo Mejorado */}
             <div className="relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#001F3F] via-[#001F3F]/95 to-[#00364D] rounded-3xl" />
-                <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-5" />
+                <div className="absolute inset-0 opacity-5" />
 
                 <div className="relative px-8 py-10">
                     <div className="flex items-start justify-between">
