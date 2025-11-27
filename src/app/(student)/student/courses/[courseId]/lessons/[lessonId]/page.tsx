@@ -1,6 +1,6 @@
 // src/app/(student)/student/courses/[courseId]/lessons/[lessonId]/page.tsx
 'use client';
-
+import { cn } from '@/lib/utils/cn';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { coursesApi } from '@/lib/api/courses';
@@ -76,6 +76,7 @@ export default function LessonPlayerPage() {
 
     // Hook para marcar como completada
     const markLessonCompleteMutation = useMarkLessonComplete();
+    const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
     useEffect(() => {
         if (courseId && lessonId) {
@@ -84,6 +85,24 @@ export default function LessonPlayerPage() {
             loadLessonData();
         }
     }, [courseId, lessonId]);
+
+    // Cerrar sidebar móvil al cambiar de lección
+    useEffect(() => {
+        setIsMobileSidebarOpen(false);
+    }, [lessonId]);
+
+    // Bloquear scroll cuando el sidebar móvil está abierto
+    useEffect(() => {
+        if (isMobileSidebarOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [isMobileSidebarOpen]);
+
 
     const loadLessonData = async () => {
         try {
@@ -368,6 +387,8 @@ export default function LessonPlayerPage() {
                 moduleTitle={currentModule?.title || 'Módulo'}
                 lessonTitle={lesson.title}
                 isCompleted={progress.isCompleted}
+                isSidebarOpen={isMobileSidebarOpen}
+                onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
             />
 
             {/* Contenido principal con sidebar */}
@@ -437,8 +458,34 @@ export default function LessonPlayerPage() {
                     </div>
                 </div>
 
-                {/* Sidebar de navegación - Fixed width en desktop */}
+                {/* Sidebar de navegación - Desktop */}
                 <div className="hidden lg:block w-96 border-l border-white/5 flex-shrink-0 overflow-hidden">
+                    <LessonSidebar
+                        courseId={courseId}
+                        courseTitle={course.title}
+                        currentLessonId={lessonId}
+                        modules={modules}
+                        progress={courseProgress}
+                    />
+                </div>
+
+                {/* Overlay para móviles */}
+                <div
+                    className={cn(
+                        "lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300",
+                        isMobileSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+                    )}
+                    onClick={() => setIsMobileSidebarOpen(false)}
+                    aria-hidden="true"
+                />
+
+                {/* Sidebar móvil deslizable */}
+                <div
+                    className={cn(
+                        "lg:hidden fixed top-0 right-0 bottom-0 w-80 sm:w-96 z-50 transition-transform duration-300 ease-in-out",
+                        isMobileSidebarOpen ? "translate-x-0" : "translate-x-full"
+                    )}
+                >
                     <LessonSidebar
                         courseId={courseId}
                         courseTitle={course.title}

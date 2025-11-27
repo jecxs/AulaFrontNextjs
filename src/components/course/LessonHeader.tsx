@@ -1,7 +1,7 @@
 // src/components/course/LessonHeader.tsx
 'use client';
 
-import { ChevronLeft, CheckCircle } from 'lucide-react';
+import { ChevronLeft, CheckCircle, Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { ROUTES } from '@/lib/utils/constants';
 import Image from 'next/image';
@@ -11,6 +11,8 @@ interface LessonHeaderProps {
     moduleTitle: string;
     lessonTitle: string;
     isCompleted: boolean;
+    isSidebarOpen?: boolean;
+    onToggleSidebar?: () => void;
 }
 
 export default function LessonHeader({
@@ -18,13 +20,15 @@ export default function LessonHeader({
                                          moduleTitle,
                                          lessonTitle,
                                          isCompleted,
+                                         isSidebarOpen = false,
+                                         onToggleSidebar,
                                      }: LessonHeaderProps) {
     return (
         <div className="bg-[#001F3F] border-b border-white/5 flex-shrink-0">
             <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between h-16 gap-4">
+                <div className="flex items-center justify-between h-16 gap-3">
                     {/* Logo y navegación */}
-                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
                         {/* Logo */}
                         <Link
                             href={ROUTES.STUDENT.DASHBOARD}
@@ -35,7 +39,7 @@ export default function LessonHeader({
                                 alt="Logo"
                                 width={160}
                                 height={52}
-                                className="h-8 w-auto"
+                                className="h-7 sm:h-8 w-auto"
                                 priority
                             />
                         </Link>
@@ -52,7 +56,7 @@ export default function LessonHeader({
                         </Link>
 
                         {/* Info de la lección */}
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 hidden sm:block">
                             <p className="text-xs text-white/50 truncate font-medium">
                                 {moduleTitle}
                             </p>
@@ -62,15 +66,43 @@ export default function LessonHeader({
                         </div>
                     </div>
 
-                    {/* Indicador de completado */}
-                    {isCompleted && (
-                        <div className="flex items-center gap-2 text-emerald-400 flex-shrink-0 bg-emerald-400/10 px-3 py-1.5 rounded-lg border border-emerald-400/20">
-                            <CheckCircle className="w-4.5 h-4.5" strokeWidth={2} />
-                            <span className="text-sm font-medium hidden sm:inline">
-                                Completada
-                            </span>
-                        </div>
-                    )}
+                    {/* Acciones del lado derecho */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        {/* Indicador de completado */}
+                        {isCompleted && (
+                            <div className="flex items-center gap-2 text-emerald-400 bg-emerald-400/10 px-2 sm:px-3 py-1.5 rounded-lg border border-emerald-400/20">
+                                <CheckCircle className="w-4 h-4" strokeWidth={2} />
+                                <span className="text-xs sm:text-sm font-medium hidden sm:inline">
+                                    Completada
+                                </span>
+                            </div>
+                        )}
+
+                        {/* ✅ Botón hamburguesa para móviles */}
+                        {onToggleSidebar && (
+                            <button
+                                onClick={onToggleSidebar}
+                                className="lg:hidden p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                                aria-label="Menú de navegación"
+                            >
+                                {isSidebarOpen ? (
+                                    <X className="w-6 h-6" strokeWidth={2} />
+                                ) : (
+                                    <Menu className="w-6 h-6" strokeWidth={2} />
+                                )}
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* ✅ Info de lección en móviles (debajo del header) */}
+                <div className="sm:hidden pb-3 pt-1">
+                    <p className="text-xs text-white/50 truncate font-medium">
+                        {moduleTitle}
+                    </p>
+                    <h1 className="text-sm font-semibold truncate text-white">
+                        {lessonTitle}
+                    </h1>
                 </div>
             </div>
         </div>
