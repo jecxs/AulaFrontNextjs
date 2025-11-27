@@ -22,9 +22,9 @@ export default function CourseDetailHeader({
                                            }: CourseDetailHeaderProps) {
     return (
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-            <div className="flex flex-col lg:flex-row">
-                {/* ✅ Thumbnail con altura ajustada para móviles */}
-                <div className="relative lg:w-96 h-48 sm:h-64 lg:h-auto bg-gradient-to-br from-[#001F3F] to-[#003A6B] overflow-hidden group">
+            <div className="flex flex-col lg:flex-row min-w-0">
+                {/* Thumbnail con altura ajustada para móviles */}
+                <div className="relative w-full lg:w-96 h-48 sm:h-64 lg:h-auto bg-gradient-to-br from-[#001F3F] to-[#003A6B] overflow-hidden group flex-shrink-0">
                     {course.thumbnailUrl ? (
                         <img
                             src={course.thumbnailUrl}
@@ -65,12 +65,12 @@ export default function CourseDetailHeader({
                     )}
                 </div>
 
-                {/* ✅ Contenido principal con mejor espaciado en móviles */}
-                <div className="flex-1 p-4 sm:p-6 lg:p-8 flex flex-col justify-between">
+                {/*  Contenido principal con mejor espaciado en móviles */}
+                <div className="flex-1 p-4 sm:p-6 lg:p-8 flex flex-col justify-between min-w-0 overflow-hidden">
                     <div className="space-y-4 sm:space-y-5">
                         {/* Título y descripción */}
                         <div>
-                            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#001F3F] mb-2 sm:mb-3 leading-tight">
+                            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#001F3F] mb-2 sm:mb-3 leading-tight break-words">
                                 {course.title}
                             </h1>
                             <p className="text-sm sm:text-base text-gray-700 leading-relaxed line-clamp-3 sm:line-clamp-none">
@@ -79,13 +79,13 @@ export default function CourseDetailHeader({
                         </div>
 
                         {/* ✅ Metadata en grid responsivo */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 w-full">
                             {course.instructor && (
-                                <div className="flex items-center gap-2 sm:gap-3 col-span-2 sm:col-span-1">
+                                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                                     <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-[#001F3F] to-[#003A6B] rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
                                         <Users className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                                     </div>
-                                    <div className="min-w-0">
+                                    <div className="min-w-0 flex-1 overflow-hidden">
                                         <div className="text-[10px] sm:text-xs text-gray-500 font-medium">Instructor</div>
                                         <div className="font-semibold text-[#001F3F] text-xs sm:text-sm truncate">
                                             {course.instructor.firstName} {course.instructor.lastName}
@@ -94,22 +94,22 @@ export default function CourseDetailHeader({
                                 </div>
                             )}
 
-                            <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                                 <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gray-100 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
                                     <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-[#001F3F]" />
                                 </div>
-                                <div>
+                                <div className="min-w-0">
                                     <div className="text-[10px] sm:text-xs text-gray-500 font-medium">Módulos</div>
                                     <div className="font-semibold text-[#001F3F] text-xs sm:text-sm">{modules.length}</div>
                                 </div>
                             </div>
 
                             {course.estimatedHours && (
-                                <div className="flex items-center gap-2 sm:gap-3">
+                                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                                     <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gray-100 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
                                         <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-[#001F3F]" />
                                     </div>
-                                    <div>
+                                    <div className="min-w-0">
                                         <div className="text-[10px] sm:text-xs text-gray-500 font-medium">Duración</div>
                                         <div className="font-semibold text-[#001F3F] text-xs sm:text-sm">{course.estimatedHours}h</div>
                                     </div>
@@ -123,7 +123,7 @@ export default function CourseDetailHeader({
                         <div className="flex flex-col gap-3 sm:gap-4">
                             {/* Progreso compacto - Stack en móvil */}
                             {progress && progress.overall && (
-                                <div className="bg-gradient-to-br from-[#001F3F] to-[#003A6B] rounded-xl p-4 sm:p-5 flex items-center justify-between">
+                                <div className="bg-gradient-to-br from-[#001F3F] to-[#003A6B] rounded-xl p-4 sm:p-5 flex items-center justify-between min-w-0 overflow-hidden">
                                     <div className="flex flex-col">
                                         <span className="text-[10px] sm:text-xs font-semibold text-white/80 mb-1">
                                             Progreso del curso

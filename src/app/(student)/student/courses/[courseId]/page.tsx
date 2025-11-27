@@ -193,7 +193,7 @@ export default function CourseDetailPage() {
     const totalQuizzes = modules.reduce((acc, module) => acc + (module.quizzes?.length || 0), 0);
 
     return (
-        <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+        <div className="w-full max-w-full mx-auto space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-8 overflow-x-hidden">
             {/* Header del curso */}
             <CourseDetailHeader
                 course={course}
@@ -203,16 +203,16 @@ export default function CourseDetailPage() {
                 courseId={courseId}
             />
 
-            {/* ✅ Contenido del curso con mejor responsive */}
-            <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                {/* ✅ Header del contenido adaptado para móviles */}
-                <div className="bg-[#001F3F] px-4 sm:px-6 lg:px-8 py-5 sm:py-7 border-b border-gray-100">
+            {/*  Contenido del curso con mejor responsive */}
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 w-full overflow-hidden">
+                {/* Header del contenido adaptado para móviles */}
+                <div className="bg-[#001F3F] px-4 sm:px-6 py-4 sm:py-6 border-b border-gray-100">
                     <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
                         <div className="w-1 sm:w-1.5 h-6 sm:h-8 bg-[#00B4D8] rounded-full" />
                         <h2 className="text-xl sm:text-2xl font-bold text-white">Contenido del curso</h2>
                     </div>
 
-                    {/* ✅ Badges responsivos que se apilan en móvil */}
+                    {/* Badges responsivos que se apilan en móvil */}
                     <div className="flex items-center gap-2 sm:gap-3 flex-wrap ml-3 sm:ml-5">
                         <span className="inline-flex items-center gap-1.5 sm:gap-2 bg-white px-2.5 sm:px-3.5 py-1.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium border border-gray-200">
                             <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#00B4D8]" strokeWidth={2} />

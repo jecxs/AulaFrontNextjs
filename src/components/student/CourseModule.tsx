@@ -62,11 +62,11 @@ export default function CourseModule({
     };
 
     return (
-        <div className="group/module">
+        <div className="group/module overflow-hidden">
             {/* ✅ Header del módulo optimizado para móviles */}
             <button
                 onClick={onToggle}
-                className="w-full flex items-center justify-between p-4 sm:p-6 hover:bg-gray-50/50 transition-all duration-200"
+                className="w-full flex items-center justify-between p-4 sm:p-6 hover:bg-gray-50/50 transition-all duration-200 min-w-0"
             >
                 <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
                     {/* ✅ Indicador con tamaño ajustado */}
@@ -89,12 +89,12 @@ export default function CourseModule({
                     </div>
 
                     {/* ✅ Información del módulo con texto truncado */}
-                    <div className="flex-1 text-left min-w-0">
+                    <div className="flex-1 text-left min-w-0 overflow-hidden">
                         <h3 className="font-semibold text-[#001F3F] text-base sm:text-lg mb-1 sm:mb-1.5 group-hover/module:text-[#00B4D8] transition-colors truncate">
                             {module.title}
                         </h3>
 
-                        <div className="flex items-center gap-3 sm:gap-5 text-xs sm:text-sm text-gray-600 flex-wrap">
+                        <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600 flex-wrap max-w-full">
                             <span className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
                                 <BookOpen className="w-3 h-3 sm:w-3.5 sm:h-3.5" strokeWidth={2} />
                                 <span className="hidden sm:inline">
@@ -121,8 +121,8 @@ export default function CourseModule({
 
                             {/* ✅ Indicador de progreso compacto en móvil */}
                             {moduleProgress > 0 && moduleProgress < 100 && (
-                                <div className="flex items-center gap-1.5 sm:gap-2 bg-gray-50 px-2 sm:px-2.5 py-1 rounded-lg flex-shrink-0">
-                                    <div className="w-10 sm:w-12 bg-gray-200 rounded-full h-1 overflow-hidden">
+                                <div className="flex items-center gap-1.5 sm:gap-2 bg-gray-50 px-2 sm:px-2.5 py-1 rounded-lg flex-shrink-0 max-w-[120px]">
+                                    <div className="w-8 sm:w-10 bg-gray-200 rounded-full h-1 overflow-hidden flex-shrink-0">
                                         <div
                                             className="bg-[#00B4D8] h-1 rounded-full transition-all duration-300"
                                             style={{ width: `${moduleProgress}%` }}
@@ -148,7 +148,7 @@ export default function CourseModule({
 
             {/* ✅ Contenido expandido con mejor espaciado en móviles */}
             {isExpanded && (
-                <div className="mt-1 ml-10 sm:ml-16 mr-3 sm:mr-6 mb-4 sm:mb-5 space-y-1">
+                <div className="mt-1 ml-8 sm:ml-16 mr-2 sm:mr-6 mb-4 sm:mb-5 space-y-1 overflow-hidden">
                     {/* Lecciones */}
                     {module.lessons.map((lesson: any, index: number) => (
                         <Link
