@@ -68,7 +68,7 @@ export interface EnrollmentWithProgress extends Enrollment {
         firstName: string;
         lastName: string;
     };
-    progress: EnrollmentProgress;
+    progress: EnrollmentProgress | null;
 }
 
 export interface EnrollmentListResponse {

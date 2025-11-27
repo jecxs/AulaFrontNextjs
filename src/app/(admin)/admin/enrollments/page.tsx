@@ -70,10 +70,23 @@ export default function AdminEnrollmentsPage() {
             }
 
             const response = await getEnrollments(params);
-            setEnrollments(response.data);
-            setPagination(response.pagination);
+            setEnrollments(response.data || []);
+            setPagination(response.pagination || {
+                page: 1,
+                limit: 10,
+                total: 0,
+                totalPages: 0,
+            });
         } catch (error) {
             console.error('Error al cargar enrollments:', error);
+            // En caso de error, establecer datos vacíos
+            setEnrollments([]);
+            setPagination({
+                page: 1,
+                limit: 10,
+                total: 0,
+                totalPages: 0,
+            });
         }
     }, [pagination.page, pagination.limit, searchQuery, statusFilter, paymentFilter, getEnrollments]);
 
@@ -333,22 +346,24 @@ export default function AdminEnrollmentsPage() {
                                                         <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
                                                             <span>Progreso del curso</span>
                                                             <span>
-                                                                {enrollment.progress?.completedLessons || 0}/
-                                                                {enrollment.progress?.totalLessons || 0} lecciones
+                                                                {enrollment.progress?.completedLessons ?? 0}/
+                                                                {enrollment.progress?.totalLessons ?? 0} lecciones
                                                             </span>
                                                         </div>
                                                         <div className="w-full bg-gray-200 rounded-full h-2">
                                                             <div
                                                                 className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                                                                 style={{
-                                                                    width: `${Math.max(0, Math.min(100, enrollment.progress?.completionPercentage || 0))}%`,
+                                                                    width: `${enrollment.progress?.completionPercentage
+                                                                        ? Math.max(0, Math.min(100, enrollment.progress.completionPercentage))
+                                                                        : 0}%`,
                                                                 }}
                                                             />
                                                         </div>
                                                         <p className="text-xs text-gray-500 mt-1">
-                                                            {enrollment.progress
+                                                            {enrollment.progress?.completionPercentage
                                                                 ? `${Math.max(0, Math.min(100, enrollment.progress.completionPercentage)).toFixed(1)}% completado`
-                                                                : '0% completado'}
+                                                                : '0.0% completado'}
                                                         </p>
                                                     </div>
 

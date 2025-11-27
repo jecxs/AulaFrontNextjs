@@ -54,11 +54,32 @@ export function useEnrollments() {
         setIsLoading(true);
         setError(null);
         try {
-            return await enrollmentsApi.getAll(params);
+            const response = await enrollmentsApi.getAll(params);
+            // Asegurar que cada enrollment tenga un progreso válido
+            return {
+                ...response,
+                data: response.data.map(enrollment => ({
+                    ...enrollment,
+                    progress: enrollment.progress || {
+                        totalLessons: 0,
+                        completedLessons: 0,
+                        completionPercentage: 0,
+                    }
+                }))
+            };
         } catch (err: unknown) {
             const errorMessage = getErrorMessage(err, 'Error al cargar enrollments');
             setError(errorMessage);
-            throw err;
+            // En lugar de lanzar el error, retornar datos vacíos
+            return {
+                data: [],
+                pagination: {
+                    page: params?.page || 1,
+                    limit: params?.limit || 10,
+                    total: 0,
+                    totalPages: 0,
+                }
+            };
         } finally {
             setIsLoading(false);
         }

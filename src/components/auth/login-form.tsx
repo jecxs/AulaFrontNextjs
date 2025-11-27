@@ -135,7 +135,7 @@ export default function LoginForm() {
                         <div className="flex items-center gap-3">
                             <div className="w-32 h-32 bg-white rounded-xl flex items-center justify-center shadow-lg p-2">
                                 <Image
-                                    src="/logo.png"
+                                    src="/logo-palomino.png"
                                     alt="Palomino Learning Center"
                                     width={68}
                                     height={68}
