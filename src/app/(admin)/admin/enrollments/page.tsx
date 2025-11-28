@@ -53,7 +53,7 @@ export default function AdminEnrollmentsPage() {
     const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
     // Cargar enrollments
-    const fetchEnrollments = useCallback(async () => {
+    const fetchEnrollments = async () => {
         try {
             const params: any = {
                 page: pagination.page,
@@ -70,42 +70,29 @@ export default function AdminEnrollmentsPage() {
             }
 
             const response = await getEnrollments(params);
-            setEnrollments(response.data || []);
-            setPagination(response.pagination || {
-                page: 1,
-                limit: 10,
-                total: 0,
-                totalPages: 0,
-            });
+
+            if (response && response.data) {
+                setEnrollments(response.data);
+                setPagination(response.pagination);
+            }
         } catch (error) {
             console.error('Error al cargar enrollments:', error);
-            // En caso de error, establecer datos vacíos
             setEnrollments([]);
-            setPagination({
-                page: 1,
-                limit: 10,
-                total: 0,
-                totalPages: 0,
-            });
         }
-    }, [pagination.page, pagination.limit, searchQuery, statusFilter, paymentFilter, getEnrollments]);
+    };
 
     useEffect(() => {
         fetchEnrollments();
-    }, [fetchEnrollments]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pagination.page, pagination.limit, searchQuery, statusFilter, paymentFilter]);
 
     // Búsqueda con debounce
     useEffect(() => {
         const timer = setTimeout(() => {
-            if (pagination.page === 1) {
-                fetchEnrollments();
-            } else {
-                setPagination(prev => ({ ...prev, page: 1 }));
-            }
+            setPagination(prev => ({ ...prev, page: 1 }));
         }, 500);
 
         return () => clearTimeout(timer);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchQuery]);
 
     const handleEdit = useCallback((enrollment: EnrollmentWithProgress) => {
@@ -126,7 +113,7 @@ export default function AdminEnrollmentsPage() {
             console.error('Error al suspender enrollment:', error);
         }
         setActiveDropdown(null);
-    }, [suspendEnrollment, fetchEnrollments]);
+    }, [suspendEnrollment]);
 
     const handleActivate = useCallback(async (enrollmentId: string) => {
         try {
@@ -153,7 +140,7 @@ export default function AdminEnrollmentsPage() {
             console.error('Error al eliminar enrollment:', error);
         }
         setActiveDropdown(null);
-    }, [deleteEnrollment, fetchEnrollments]);
+    }, [deleteEnrollment]);
 
     const getStatusBadge = (status: EnrollmentStatus) => {
         const variants = {
@@ -342,30 +329,27 @@ export default function AdminEnrollmentsPage() {
 
 
                                                     {/* Progreso */}
-                                                    <div className="mt-3">
-                                                        <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-                                                            <span>Progreso del curso</span>
-                                                            <span>
-                                                                {enrollment.progress?.completedLessons ?? 0}/
-                                                                {enrollment.progress?.totalLessons ?? 0} lecciones
-                                                            </span>
+                                                    {enrollment.progress && (
+                                                        <div className="mt-3">
+                                                            <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
+                                                                <span>Progreso del curso</span>
+                                                                <span>
+                                                                    {enrollment.progress.completedLessons}/{enrollment.progress.totalLessons} lecciones
+                                                                </span>
+                                                           </div>
+                                                            <div className="w-full bg-gray-200 rounded-full h-2">
+                                                                <div
+                                                                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                                                    style={{
+                                                                        width: `${Math.max(0, Math.min(100, enrollment.progress.completionPercentage))}%`,
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                            <p className="text-xs text-gray-500 mt-1">
+                                                                {enrollment.progress.completionPercentage.toFixed(1)}% completado
+                                                            </p>
                                                         </div>
-                                                        <div className="w-full bg-gray-200 rounded-full h-2">
-                                                            <div
-                                                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                                                style={{
-                                                                    width: `${enrollment.progress?.completionPercentage
-                                                                        ? Math.max(0, Math.min(100, enrollment.progress.completionPercentage))
-                                                                        : 0}%`,
-                                                                }}
-                                                            />
-                                                        </div>
-                                                        <p className="text-xs text-gray-500 mt-1">
-                                                            {enrollment.progress?.completionPercentage
-                                                                ? `${Math.max(0, Math.min(100, enrollment.progress.completionPercentage)).toFixed(1)}% completado`
-                                                                : '0.0% completado'}
-                                                        </p>
-                                                    </div>
+                                                    )}
 
                                                     {/* Fechas */}
                                                     <div className="mt-2 flex items-center space-x-4 text-xs text-gray-500">
