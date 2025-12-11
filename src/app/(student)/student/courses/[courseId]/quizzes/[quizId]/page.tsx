@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuizPreview, useQuizResults, useSubmitQuiz } from '@/hooks/use-student-quizzes';
+import { useQuizProtection } from '@/hooks/use-quiz-protection';
 import { QuizAnswer, QuestionForStudent } from '@/types/quiz';
 import { coursesApi } from '@/lib/api/courses';
 import {
@@ -16,6 +17,7 @@ import {
     ChevronLeft,
     Send,
     X,
+    Shield,
 } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { toast } from 'sonner';
@@ -38,6 +40,9 @@ export default function QuizAttemptPage() {
     // Hooks
     const { data: quizPreview, isLoading, error } = useQuizPreview(quizId);
     const submitQuizMutation = useSubmitQuiz();
+
+    // 🔒 ACTIVAR PROTECCIÓN DEL QUIZ
+    useQuizProtection(true);
 
     // Inicializar temporizador
     useEffect(() => {
@@ -182,7 +187,7 @@ export default function QuizAttemptPage() {
     const progress = ((currentQuestionIndex + 1) / quizPreview.questions.length) * 100;
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 select-none">
             {/* Top Navigation Bar */}
             <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
                 <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -207,21 +212,29 @@ export default function QuizAttemptPage() {
                         )}
                     </div>
 
-                    {/* Temporizador en header */}
-                    {timeRemaining !== null && (
-                        <div
-                            className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-semibold ${
-                                timeRemaining < 60
-                                    ? 'bg-red-100 text-red-700'
-                                    : timeRemaining < 300
-                                        ? 'bg-yellow-100 text-yellow-700'
-                                        : 'bg-blue-100 text-blue-700'
-                            }`}
-                        >
-                            <Clock className="w-5 h-5" />
-                            <span className="font-mono text-lg">{formatTime(timeRemaining)}</span>
+                    <div className="flex items-center space-x-3">
+                        {/* Indicador de Protección Activa */}
+                        <div className="flex items-center space-x-2 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg">
+                            <Shield className="w-4 h-4" />
+                            <span className="text-xs font-semibold">Protegido</span>
                         </div>
-                    )}
+
+                        {/* Temporizador en header */}
+                        {timeRemaining !== null && (
+                            <div
+                                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-semibold ${
+                                    timeRemaining < 60
+                                        ? 'bg-red-100 text-red-700'
+                                        : timeRemaining < 300
+                                            ? 'bg-yellow-100 text-yellow-700'
+                                            : 'bg-blue-100 text-blue-700'
+                                }`}
+                            >
+                                <Clock className="w-5 h-5" />
+                                <span className="font-mono text-lg">{formatTime(timeRemaining)}</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -284,11 +297,19 @@ export default function QuizAttemptPage() {
 
                         {/* Imagen de la pregunta */}
                         {currentQuestion.imageUrl && (
-                            <img
-                                src={currentQuestion.imageUrl}
-                                alt="Imagen de la pregunta"
-                                className="max-w-full h-auto rounded-lg mb-4"
-                            />
+                            <div className="relative">
+                                <img
+                                    src={currentQuestion.imageUrl}
+                                    alt="Imagen de la pregunta"
+                                    className="max-w-full h-auto rounded-lg mb-4 pointer-events-none"
+                                    draggable="false"
+                                    onContextMenu={(e) => e.preventDefault()}
+                                />
+                                {/* Watermark sutil sobre la imagen */}
+                                <div className="absolute top-2 right-2 bg-black/20 text-white text-xs px-2 py-1 rounded pointer-events-none">
+                                    Contenido Protegido
+                                </div>
+                            </div>
                         )}
                     </div>
 
@@ -416,6 +437,36 @@ export default function QuizAttemptPage() {
                     </div>
                 </div>
             </div>
+
+            {/* CSS adicional para reforzar protecciones */}
+            <style jsx global>{`
+                /* Prevenir selección de texto en todo el quiz */
+                .select-none * {
+                    user-select: none !important;
+                    -webkit-user-select: none !important;
+                    -moz-user-select: none !important;
+                    -ms-user-select: none !important;
+                }
+                
+                /* Prevenir arrastre de imágenes */
+                .select-none img {
+                    pointer-events: none;
+                    -webkit-user-drag: none;
+                    -khtml-user-drag: none;
+                    -moz-user-drag: none;
+                    -o-user-drag: none;
+                    user-drag: none;
+                }
+                
+                /* Prevenir copiar en inputs (por si acaso) */
+                .select-none input,
+                .select-none textarea {
+                    -webkit-user-select: text !important;
+                    -moz-user-select: text !important;
+                    -ms-user-select: text !important;
+                    user-select: text !important;
+                }
+            `}</style>
         </div>
     );
 }

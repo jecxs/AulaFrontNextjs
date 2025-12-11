@@ -1,0 +1,100 @@
+/* src/styles/quiz-protection.css */
+
+/* ========================================
+   PROTECCIÓN DE QUIZZES - ESTILOS GLOBALES
+   ======================================== */
+
+/* Aplicar a la página de quiz */
+.quiz-protected {
+    /* Prevenir selección de texto */
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+
+    /* Prevenir arrastre */
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+}
+
+/* Prevenir selección en todos los elementos hijos */
+.quiz-protected * {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+}
+
+/* Prevenir arrastre de imágenes */
+.quiz-protected img {
+    pointer-events: none;
+    -webkit-user-drag: none !important;
+    -khtml-user-drag: none !important;
+    -moz-user-drag: none !important;
+    -o-user-drag: none !important;
+    user-drag: none !important;
+}
+
+/* Prevenir copiar desde inputs (permitir edición pero no copiar) */
+.quiz-protected input,
+.quiz-protected textarea {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+}
+
+/* Ocultar texto al intentar seleccionar (alternativa más agresiva) */
+.quiz-protected ::selection {
+    background: transparent;
+    color: inherit;
+}
+
+.quiz-protected ::-moz-selection {
+    background: transparent;
+    color: inherit;
+}
+
+/* Prevenir modo de impresión */
+@media print {
+    .quiz-protected {
+        display: none !important;
+    }
+
+    .quiz-protected::before {
+        content: "Este contenido no puede ser impreso.";
+        display: block;
+        text-align: center;
+        padding: 50px;
+        font-size: 24px;
+        color: #dc2626;
+    }
+}
+
+/* Watermark sutil para capturas (opcional) */
+.quiz-protected::before {
+    content: attr(data-watermark);
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    font-size: 120px;
+    color: rgba(0, 0, 0, 0.02);
+    pointer-events: none;
+    z-index: 1;
+    white-space: nowrap;
+}
+
+/* Overlay invisible para prevenir clicks en DevTools */
+.quiz-protected .quiz-content::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
