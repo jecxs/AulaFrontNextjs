@@ -85,7 +85,7 @@ export default function LoginForm() {
                                     />
                                 </div>
                                 <div>
-                                    <h1 className="text-3xl font-bold">Palomino Learning Center</h1>
+                                    <h1 className="text-3xl font-bold">Illumina</h1>
                                     <p className="text-[#00B4D8] text-sm font-medium">Aula Virtual</p>
                                 </div>
                             </div>
@@ -248,7 +248,7 @@ export default function LoginForm() {
 
                     {/* Footer */}
                     <p className="text-center text-gray-500 text-xs mt-8">
-                        © 2025 Aula Virtual - Palomino Learning Center. Todos los derechos reservados.
+                        © 2025 Aula Virtual - Illumina. Todos los derechos reservados.
                     </p>
                 </div>
             </div>

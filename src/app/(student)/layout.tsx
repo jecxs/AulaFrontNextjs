@@ -122,7 +122,7 @@ function StudentNavbar({
                             <div className="relative w-12 h-12 transition-transform duration-300 group-hover:scale-105">
                                 <Image
                                     src="/logo-palomino.png"
-                                    alt="Palomino Learning Center"
+                                    alt="Illumina"
                                     fill
                                     className="object-contain"
                                     priority
@@ -292,7 +292,7 @@ function StudentSidebar() {
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p className="text-xs font-bold text-[#001F3F] truncate">
-                                    Palomino Learning
+                                    Illumina
                                 </p>
                                 <p className="text-[10px] text-[#001F3F]/50">
                                     Centro de Aprendizaje

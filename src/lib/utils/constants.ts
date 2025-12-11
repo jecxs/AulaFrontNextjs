@@ -1,5 +1,5 @@
 // src/lib/utils/constants.ts
-export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Palomino Learning Center';
+export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Illumina';
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export const ROUTES = {
