@@ -13,6 +13,7 @@ export const ROUTES = {
         COURSES: '/student/courses',
         PROFILE: '/student/profile',
         LIVE_SESSIONS: '/student/live-sessions',
+        CHANGE_PASSWORD: '/student/change-password',
     },
     ADMIN: {
         DASHBOARD: '/admin/dashboard',

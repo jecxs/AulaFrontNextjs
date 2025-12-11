@@ -1,4 +1,4 @@
-// src/hooks/use-users.ts
+// src/hooks/use-users.ts - VERSIÓN CORREGIDA
 import { useState } from 'react';
 import { CreateUserDto } from '@/types/user';
 import { usersApi } from '@/lib/api/users';
@@ -17,7 +17,7 @@ export function useUsers() {
         setIsLoading(true);
         try {
             // 1. Crear el usuario
-            const user = await usersApi.create({
+            const response = await usersApi.create({
                 email: data.email,
                 password: data.password,
                 firstName: data.firstName,
@@ -26,11 +26,22 @@ export function useUsers() {
                 status: data.status || 'ACTIVE',
             });
 
+            // ✅ CORRECCIÓN: Acceder correctamente al usuario
+            const user = response.user;
+
             // 2. Asignar el rol de STUDENT
-            await rolesApi.assignRole({
-                userId: user.id,
-                roleName: 'STUDENT',
-            });
+            try {
+                await rolesApi.assignRole({
+                    userId: user.id,
+                    roleName: 'STUDENT',
+                });
+            } catch (roleError: any) {
+                console.error('Error al asignar rol:', roleError);
+                // ✅ Si el error es porque ya tiene el rol, continuamos
+                if (roleError.response?.status !== 409) {
+                    throw roleError;
+                }
+            }
 
             // 3. Si se proporcionaron cursos, inscribir al estudiante
             if (data.courseIds && data.courseIds.length > 0) {

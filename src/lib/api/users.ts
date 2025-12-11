@@ -1,12 +1,17 @@
-// src/lib/api/users.ts
+// src/lib/api/users.ts - ACTUALIZACIÓN COMPLETA
 import { apiClient } from './client';
-import {CreateUserDto, UpdateUserDto, UserStats} from "@/types/user";
-import {User} from "@/types";
+import { CreateUserDto, UpdateUserDto, UserStats } from "@/types/user";
+import { User } from "@/types";
+
+export interface ChangePasswordDto {
+    currentPassword: string;
+    newPassword: string;
+}
 
 export const usersApi = {
     // Crear nuevo usuario
-    create: async (data: CreateUserDto): Promise<User> => {
-        return apiClient.post<User>('/users', data);
+    create: async (data: CreateUserDto): Promise<{ user: User; generatedPassword?: string }> => {
+        return apiClient.post<{ user: User; generatedPassword?: string }>('/users', data);
     },
 
     // Obtener todos los usuarios
@@ -22,6 +27,16 @@ export const usersApi = {
     // Actualizar usuario
     update: async (id: string, data: UpdateUserDto): Promise<User> => {
         return apiClient.patch<User>(`/users/${id}`, data);
+    },
+
+    // Cambiar contraseña (usuario actual)
+    changePassword: async (data: ChangePasswordDto): Promise<{ message: string }> => {
+        return apiClient.patch<{ message: string }>('/users/change-password', data);
+    },
+
+    // Resetear contraseña (solo admin)
+    resetPassword: async (userId: string, password?: string): Promise<{ user: User; newPassword: string }> => {
+        return apiClient.patch<{ user: User; newPassword: string }>(`/users/${userId}/reset-password`, { password });
     },
 
     // Suspender usuario

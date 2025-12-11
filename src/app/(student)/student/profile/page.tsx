@@ -1,4 +1,4 @@
-// src/app/(student)/student/profile/page.tsx
+// src/app/(student)/student/profile/page.tsx - VERSIÓN ACTUALIZADA
 'use client';
 
 import React from 'react';
@@ -6,20 +6,21 @@ import Link from 'next/link';
 import { useStudentProfile } from '@/hooks/use-student-profile';
 import { ROUTES } from '@/lib/utils/constants';
 import LoadingSpinner from '@/components/ui/loading-spinner';
+import PasswordChangeBanner from '@/components/student/PasswordChangeBanner';
 import {
     User,
     Mail,
     Phone,
     Calendar,
     BookOpen,
-    Award,
-    Clock,
     Bell,
     TrendingUp,
     ExternalLink,
     CheckCircle,
     Video,
     ArrowRight,
+    Clock,
+    Lock,
 } from 'lucide-react';
 
 export default function StudentProfilePage() {
@@ -82,6 +83,9 @@ export default function StudentProfilePage() {
 
     return (
         <div className="max-w-7xl mx-auto space-y-8">
+            {/* ✅ Banner de Recomendación de Cambio de Contraseña */}
+            <PasswordChangeBanner />
+
             {/* Header del perfil */}
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-lg overflow-hidden">
                 <div className="p-8">
@@ -306,7 +310,7 @@ export default function StudentProfilePage() {
                         )}
                     </div>
 
-                    {/* Información adicional */}
+                    {/* Información adicional y Seguridad */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                         <h2 className="text-lg font-bold text-gray-900 mb-4">
                             Estado de la Cuenta
@@ -325,11 +329,22 @@ export default function StudentProfilePage() {
                                     {profile.coursesStats.expiredEnrollments}
                                 </span>
                             </div>
-                            <div className="flex items-center justify-between py-2">
+                            <div className="flex items-center justify-between py-2 border-b border-gray-100">
                                 <span className="text-sm text-gray-600">Miembro desde</span>
                                 <span className="text-sm font-medium text-gray-900">
                                     {formatDate(profile.createdAt)}
                                 </span>
+                            </div>
+
+                            {/* ✅ Botón de Cambiar Contraseña */}
+                            <div className="pt-3">
+                                <Link
+                                    href={ROUTES.STUDENT.CHANGE_PASSWORD}
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium transition-all shadow-sm hover:shadow-md"
+                                >
+                                    <Lock className="w-4 h-4" />
+                                    Cambiar Contraseña
+                                </Link>
                             </div>
                         </div>
                     </div>
